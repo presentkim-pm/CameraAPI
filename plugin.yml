@@ -1,0 +1,8 @@
+---
+name: CameraAPI
+main: kim\present\cameraapi\Main
+version: 0.0.1
+api: [ 5.0.0 ]
+author: PresentKim
+description: A simple camera API plugin
+...

@@ -33,7 +33,6 @@ use pocketmine\network\mcpe\protocol\CameraPresetsPacket;
 use pocketmine\network\mcpe\protocol\types\camera\CameraPreset;
 use pocketmine\player\Player;
 use pocketmine\Server;
-use pocketmine\utils\RegistryTrait;
 
 /**
  * Registry for managing and synchronizing all camera presets.
@@ -43,7 +42,13 @@ use pocketmine\utils\RegistryTrait;
  * for the Minecraft client to correctly identify presets via network packets.
  */
 final class CameraPresetRegistry{
-    use RegistryTrait;
+
+    /**
+     * Init from {@see self::checkInit()}
+     *
+     * @var CameraPresetData[]
+     */
+    private static array $members;
 
     private static int $newPresetId = 0;
 
@@ -94,6 +99,18 @@ final class CameraPresetRegistry{
     }
 
     /**
+     * @throws \InvalidArgumentException
+     * @internal Lazy-inits the enum if necessary.
+     *
+     */
+    protected static function checkInit() : void{
+        if(!isset(self::$members)){
+            self::$members = [];
+            self::setup();
+        }
+    }
+
+    /**
      * Registers a camera preset and generates a CameraPresetData object.
      *
      * This method assigns a unique sequential ID to the preset based on the current
@@ -107,10 +124,12 @@ final class CameraPresetRegistry{
     public static function register(CameraPreset $preset) : CameraPresetData{
         self::checkInit();
 
-        $data = new CameraPresetData($preset->getName(), $preset, self::$newPresetId++);
-        self::_registryRegister($preset->getName(), $data);
+        $lowerName = strtolower($preset->getName());
+        if(isset(self::$members[$lowerName])){
+            throw new \InvalidArgumentException("\"$lowerName\" is already reserved");
+        }
 
-        return $data;
+        return self::$members[$lowerName] = new CameraPresetData($lowerName, $preset, self::$newPresetId++);
     }
 
     /**
@@ -123,9 +142,12 @@ final class CameraPresetRegistry{
     public static function get(string $name) : ?CameraPresetData{
         self::checkInit();
 
-        /** @var ?CameraPresetData $preset */
-        $preset = self::_registryFromString($name);
-        return $preset;
+        $lowerName = strtolower($name);
+        if(!isset(self::$members[$lowerName])){
+            throw new \InvalidArgumentException("No such registry member: " . $lowerName);
+        }
+
+        return self::$members[$lowerName];
     }
 
     /**

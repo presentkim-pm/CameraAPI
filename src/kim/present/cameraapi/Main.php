@@ -34,7 +34,7 @@ use pocketmine\plugin\PluginBase;
 
 final class Main extends PluginBase implements Listener{
 
-    protected function onDisable() : void{
+    protected function onEnable() : void{
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
     }
 

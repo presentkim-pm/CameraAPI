@@ -157,6 +157,7 @@ final class CameraPresetRegistry{
      * @return CameraPresetData[] A list containing all registered presets.
      */
     public static function getAll() : array{
+        self::checkInit();
         return array_values(self::$members);
     }
 

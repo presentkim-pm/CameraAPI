@@ -27,11 +27,19 @@ declare(strict_types=1);
 
 namespace kim\present\cameraapi;
 
+use kim\present\cameraapi\preset\CameraPresetRegistry;
+use pocketmine\event\Listener;
+use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\plugin\PluginBase;
 
-final class Main extends PluginBase{
+final class Main extends PluginBase implements Listener{
 
-    protected function onEnable() : void{
+    protected function onDisable() : void{
+        $this->getServer()->getPluginManager()->registerEvents($this, $this);
+    }
+
+    public function onPlayerJoin(PlayerJoinEvent $event) : void{
+        CameraPresetRegistry::sendTo($event->getPlayer());
     }
 
 }

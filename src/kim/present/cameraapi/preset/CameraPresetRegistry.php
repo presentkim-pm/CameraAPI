@@ -132,9 +132,10 @@ final class CameraPresetRegistry{
      * Retrieves the network-compatible ID associated with a preset name.
      *
      * @param string $name The unique identifier of the preset.
-     *                     * @return string|null The sequential ID as a string, or null if the preset is not registered.
+     *
+     * @return int|null The sequential ID as an integer, or null if the preset is not registered.
      */
-    public static function getIdByName(string $name) : ?string{
+    public static function getIdByName(string $name) : ?int{
         return self::get($name)?->getId();
     }
 

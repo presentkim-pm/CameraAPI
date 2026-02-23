@@ -32,6 +32,10 @@ use kim\present\cameraapi\session\CameraSessionManager;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\event\server\DataPacketSendEvent;
+use pocketmine\network\mcpe\protocol\ResourcePackStackPacket;
+use pocketmine\network\mcpe\protocol\StartGamePacket;
+use pocketmine\network\mcpe\protocol\types\Experiments;
 use pocketmine\plugin\PluginBase;
 use pocketmine\utils\SingletonTrait;
 
@@ -62,4 +66,22 @@ final class Main extends PluginBase implements Listener{
     public function onPlayerQuit(PlayerQuitEvent $event) : void{
         CameraSessionManager::removeSession($event->getPlayer());
     }
+
+    /** @priority LOWEST */
+    public function onDataPacketSend(DataPacketSendEvent $event) : void{
+        foreach($event->getPackets() as $packet){
+            if($packet instanceof StartGamePacket){
+                $this->enableExperimentalCreatorCameras($packet->levelSettings->experiments);
+            }elseif($packet instanceof ResourcePackStackPacket){
+                $this->enableExperimentalCreatorCameras($packet->experiments);
+            }
+        }
+    }
+
+    private function enableExperimentalCreatorCameras(Experiments $experiments) : void{
+        (function() use ($experiments) : void{
+            $experiments->experiments["experimental_creator_cameras"] = true;
+        })->bindTo($this, Experiments::class)();
+    }
+
 }

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace kim\present\cameraapi\session;
 
+use kim\present\cameraapi\builder\CameraFadeBuilder;
+use kim\present\cameraapi\builder\CameraFovBuilder;
+use kim\present\cameraapi\builder\CameraSetBuilder;
+use kim\present\cameraapi\builder\CameraSplineBuilder;
+use kim\present\cameraapi\builder\CameraTargetBuilder;
 use pocketmine\network\mcpe\protocol\CameraInstructionPacket;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
@@ -36,6 +41,56 @@ final class CameraSession{
      */
     public function getPlayer() : ?Player{
         return $this->playerRef->get();
+    }
+
+    /**
+     * Creates a builder for 'Camera Set' instruction.
+     * Used to position and rotate the camera.
+     *
+     * @return CameraSetBuilder
+     */
+    public function set() : CameraSetBuilder{
+        return new CameraSetBuilder($this);
+    }
+
+    /**
+     * Creates a builder for 'Camera Fade' instruction.
+     * Used to control screen fading (color, time).
+     *
+     * @return CameraFadeBuilder
+     */
+    public function fade() : CameraFadeBuilder{
+        return new CameraFadeBuilder($this);
+    }
+
+    /**
+     * Creates a builder for 'Camera Target' instruction.
+     * Used to make the camera track an entity or position.
+     *
+     * @return CameraTargetBuilder
+     */
+    public function target() : CameraTargetBuilder{
+        return new CameraTargetBuilder($this);
+    }
+
+    /**
+     * Creates a builder for 'Camera FOV' instruction.
+     * Used to change the Field of View.
+     *
+     * @return CameraFovBuilder
+     */
+    public function fov() : CameraFovBuilder{
+        return new CameraFovBuilder($this);
+    }
+
+    /**
+     * Creates a builder for 'Camera Spline' instruction.
+     * Used to create smooth cinematic camera paths.
+     *
+     * @return CameraSplineBuilder
+     */
+    public function spline() : CameraSplineBuilder{
+        return new CameraSplineBuilder($this);
     }
 
     /**

@@ -33,8 +33,14 @@ use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\plugin\PluginBase;
+use pocketmine\utils\SingletonTrait;
 
 final class Main extends PluginBase implements Listener{
+    use SingletonTrait;
+
+    protected function onLoad() : void{
+        self::setInstance($this);
+    }
 
     protected function onEnable() : void{
         $this->getServer()->getPluginManager()->registerEvents($this, $this);

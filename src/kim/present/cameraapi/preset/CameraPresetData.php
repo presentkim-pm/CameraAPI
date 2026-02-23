@@ -48,14 +48,29 @@ final readonly class CameraPresetData{
         private int $id
     ){}
 
+    /**
+     * Returns the unique string identifier of this preset.
+     *
+     * @return string
+     */
     public function getName() : string{
         return $this->name;
     }
 
+    /**
+     * Returns the network ID used for synchronization.
+     *
+     * @return int
+     */
     public function getId() : int{
         return $this->id;
     }
 
+    /**
+     * Returns the underlying PMMP CameraPreset object.
+     *
+     * @return CameraPreset
+     */
     public function getPreset() : CameraPreset{
         return $this->preset;
     }

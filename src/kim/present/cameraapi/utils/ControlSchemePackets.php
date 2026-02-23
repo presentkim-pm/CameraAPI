@@ -31,7 +31,6 @@ use pocketmine\network\mcpe\protocol\ClientboundControlSchemeSetPacket;
 use pocketmine\network\mcpe\protocol\types\ControlScheme;
 use pocketmine\utils\RegistryTrait;
 
-
 /**
  * Provides {@link ClientboundControlSchemeSetPacket} to simplify player control scheme.
  * Some schemes need to be set to a specific camera before they are applied.

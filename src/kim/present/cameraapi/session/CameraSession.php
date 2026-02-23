@@ -88,6 +88,8 @@ final class CameraSession{
      * Used to create smooth cinematic camera paths.
      *
      * @return CameraSplineBuilder
+     * @deprecated Causes a fatal issue where the client drops the connection due to an internal error. Do not use
+     *              until further notice.
      */
     public function spline() : CameraSplineBuilder{
         return new CameraSplineBuilder($this);

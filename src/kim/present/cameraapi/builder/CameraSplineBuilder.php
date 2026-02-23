@@ -52,6 +52,11 @@ use pocketmine\network\mcpe\protocol\types\camera\CameraSplineInstruction;
  *     ->ease(EaseType::LINEAR)
  *     ->send();
  * ```
+ *
+ * @deprecated Causes the client to forcefully disconnect (crash) due to an error.
+ *             This will be fixed once the root cause is identified.
+ *
+ * @todo       Investigate and resolve the client crash issue caused by spline data transmission
  */
 final class CameraSplineBuilder{
 

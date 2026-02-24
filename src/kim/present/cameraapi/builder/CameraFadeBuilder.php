@@ -58,7 +58,7 @@ final class CameraFadeBuilder{
     private float $fadeIn = 0.5;
     private float $stay = 0.5;
     private float $fadeOut = 0.5;
-    private ?Color $color = null;
+    private Color|DyeColor|null $color = null;
 
     public function __construct(
         private readonly CameraSession $session
@@ -103,11 +103,11 @@ final class CameraFadeBuilder{
     /**
      * Sets the color of the fade curtain.
      *
-     * @param Color $color The color to use (default is Black).
+     * @param Color|DyeColor $color The color to use (default is Black).
      *
      * @return self
      */
-    public function color(Color $color) : self{
+    public function color(Color|DyeColor $color) : self{
         $this->color = $color;
         return $this;
     }

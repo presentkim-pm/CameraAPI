@@ -79,7 +79,14 @@ final class CameraTimeline{
         return $this;
     }
 
-    private function add(\Closure $action) : self{
+    /**
+     * Adds a custom action to the timeline at the current time offset.
+     *
+     * @param \Closure(CameraSession): void $action Callback receiving the player's camera session
+     *
+     * @return self For chaining.
+     */
+    public function add(\Closure $action) : self{
         $this->queue[] = [$this->currentTime, $action];
         return $this;
     }

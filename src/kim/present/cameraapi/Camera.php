@@ -29,6 +29,7 @@ namespace kim\present\cameraapi;
 
 use kim\present\cameraapi\session\CameraSession;
 use kim\present\cameraapi\session\CameraSessionManager;
+use kim\present\cameraapi\timeline\CameraTimeline;
 use pocketmine\player\Player;
 
 /**
@@ -60,6 +61,15 @@ final class Camera{
             return CameraSessionManager::createSession($player);
         }
         return $session;
+    }
+
+    /**
+     * Creates a new empty timeline for sequencing camera instructions.
+     *
+     * @return CameraTimeline A new timeline instance (use ->set(), ->fade(), ->wait(), etc. then ->play($player)).
+     */
+    public static function timeline() : CameraTimeline{
+        return new CameraTimeline();
     }
 
 }

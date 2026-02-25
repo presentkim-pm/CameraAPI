@@ -244,7 +244,19 @@ $timeline->play($player);
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
   - `stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
   - `clear() : self`
+  - `setLoop(bool $loop = true) : self` – when enabled, the full sequence automatically restarts after it finishes, until the underlying `CameraSession` is stopped.
   - `play(Player $player) : void`
+
+To loop a timeline indefinitely until you clear/stop the camera session:
+
+```php
+$timeline
+    ->set(/* ... */)
+    ->wait(2.0)
+    ->clear()
+    ->setLoop()   // enable looping
+    ->play($player);
+```
 
 **Note**: `spline()` uses `CameraSplineBuilder` under the hood, which is currently marked **deprecated** due to client
 crash / disconnect issues.

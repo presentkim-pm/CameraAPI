@@ -64,6 +64,7 @@ final class CameraTimeline{
     /** @var array<int, array{float, \Closure}> */
     private array $queue = [];
     private float $currentTime = 0.0;
+    private bool $loop = false;
 
     public function __construct(){}
 
@@ -88,6 +89,20 @@ final class CameraTimeline{
      */
     public function add(\Closure $action) : self{
         $this->queue[] = [$this->currentTime, $action];
+        return $this;
+    }
+
+    /**
+     * Enables or disables looping this timeline. When enabled, the full
+     * sequence will automatically restart after it finishes, until the
+     * underlying CameraSession is stopped.
+     *
+     * @param bool $loop
+     *
+     * @return self
+     */
+    public function setLoop(bool $loop = true) : self{
+        $this->loop = $loop;
         return $this;
     }
 
@@ -232,6 +247,17 @@ final class CameraTimeline{
                 }), $tickDelay);
                 $session->addTimelineTask($task);
             }
+        }
+
+        // Automatically loop the entire sequence if requested.
+        if($this->loop && $this->currentTime > 0){
+            $totalTicks = (int) ($this->currentTime * 20);
+            $loopTask = $scheduler->scheduleDelayedTask(new ClosureTask(function() use ($session) : void{
+                if($session->getPlayer() !== null && $session->getPlayer()->isConnected()){
+                    $this->play($session);
+                }
+            }), $totalTicks);
+            $session->addTimelineTask($loopTask);
         }
     }
 }

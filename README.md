@@ -178,8 +178,8 @@ $session->target()
 
 - **Methods**
   - `offset(Vector3 $offset) : self`
-  - `entity(Entity $entity) : self`
-  - `entityId(int $id) : self`
+  - `entity(?Entity $entity) : self` – set or clear the tracked entity (null to clear).
+  - `entityId(?int $id) : self` – set or clear the tracked entity ID (null to clear).
   - `send() : CameraSession`
 
 #### 2.4 FOV Control: `fov() : CameraFovBuilder`

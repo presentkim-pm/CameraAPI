@@ -74,23 +74,29 @@ final class CameraTargetBuilder{
     /**
      * Sets the target entity to track.
      *
-     * @param Entity $entity
+     * Passing null clears the current target entity ID, which effectively
+     * stops tracking a specific entity (the behaviour is defined by the
+     * Minecraft client; usually this means \"no target\").
+     *
+     * @param Entity|null $entity Target entity or null to clear.
      *
      * @return self
      */
-    public function entity(Entity $entity) : self{
-        $this->entityId = $entity->getId();
+    public function entity(?Entity $entity) : self{
+        $this->entityId = $entity?->getId();
         return $this;
     }
 
     /**
      * Sets the target entity ID manually.
      *
-     * @param int $id The runtime ID of the entity.
+     * Passing null clears the current target entity ID.
+     *
+     * @param int|null $id The runtime ID of the entity or null to clear.
      *
      * @return self
      */
-    public function entityId(int $id) : self{
+    public function entityId(?int $id) : self{
         $this->entityId = $id;
         return $this;
     }
@@ -98,10 +104,10 @@ final class CameraTargetBuilder{
     /**
      * Builds the CameraTargetInstruction object.
      *
-     * @return CameraTargetInstruction
+     * @return CameraTargetInstruction|null
      */
-    public function build() : CameraTargetInstruction{
-        return new CameraTargetInstruction($this->offset, $this->entityId);
+    public function build() : ?CameraTargetInstruction{
+        return $this->entityId === null ? null : new CameraTargetInstruction($this->offset, $this->entityId);
     }
 
     /**
@@ -116,7 +122,7 @@ final class CameraTargetBuilder{
             clear: null,
             fade: null,
             target: $instruction,
-            removeTarget: null,
+            removeTarget: $instruction === null ? null : true,
             fieldOfView: null,
             spline: null,
             attachToEntity: null,

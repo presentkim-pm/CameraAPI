@@ -210,12 +210,12 @@ final class CameraTimeline{
      * Plays the timeline for the specified player.
      * This schedules all queued instructions using the server scheduler.
      *
-     * @param Player $player
+     * @param Player|CameraSession $player
      *
      * @return void
      */
-    public function play(Player $player) : void{
-        $session = Camera::of($player);
+    public function play(Player|CameraSession $player) : void{
+        $session = $player instanceof CameraSession ? $player : Camera::of($player);
         $session->stop(); // Cancel currently running timeline tasks
 
         $scheduler = Main::getInstance()->getScheduler();

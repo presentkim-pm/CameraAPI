@@ -109,6 +109,43 @@ final class CameraSetBuilder{
     }
 
     /**
+     * Calculates and sets the camera rotation so it looks at a target point.
+     *
+     * This uses the previously configured camera position (via {@see position()})
+     * as the origin, and computes the pitch/yaw required to face the given
+     * world-space target vector.
+     *
+     * @param Vector3 $target World position for the camera to look at.
+     *
+     * @return self
+     *
+     * @throws \LogicException If the camera position has not been set yet.
+     */
+    public function rotationTo(Vector3 $target) : self{
+        if($this->cameraPosition === null){
+            throw new \LogicException("Camera position must be set before calling rotationTo().");
+        }
+
+        $xDist = $target->x - $this->cameraPosition->x;
+        $zDist = $target->z - $this->cameraPosition->z;
+
+        // Avoid division by zero when the target is directly above/below.
+        $horizontal = sqrt($xDist ** 2 + $zDist ** 2);
+        $vertical = $target->y - $this->cameraPosition->y;
+        $pitch = $horizontal > 0.0
+            ? -atan2($vertical, $horizontal) / M_PI * 180
+            : ($vertical > 0.0 ? -90.0 : 90.0);
+
+        $yaw = atan2($zDist, $xDist) / M_PI * 180 - 90.0;
+        if($yaw < 0.0){
+            $yaw += 360.0;
+        }
+
+        // rotation() expects (pitch, yaw) in this builder.
+        return $this->rotation($pitch, $yaw);
+    }
+
+    /**
      * Sets the rotation of the camera.
      *
      * @param float $pitch Pitch angle (vertical).

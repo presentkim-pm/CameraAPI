@@ -132,6 +132,20 @@ $session->set()
     ->send();
 ```
 
+- Or, if you prefer to orient the camera toward a specific point:
+
+```php
+use pocketmine\math\Vector3;
+
+$target = new Vector3(0, 64, 0); // Look at this world-space position
+
+$session->set()
+    ->preset("minecraft:free")
+    ->position($pos)
+    ->rotationTo($target) // compute pitch/yaw so the camera looks at $target
+    ->send();
+```
+
 - **Key methods**
   - `preset(string $preset) : self`
     - e.g. `"minecraft:first_person"`, `"minecraft:third_person"`, `"minecraft:free"`, or your custom presets.
@@ -139,6 +153,7 @@ $session->set()
     - Use `CameraSetInstructionEaseType` constants (e.g. `EaseType::LINEAR`).
   - `position(Vector3 $position) : self`
   - `rotation(float $pitch, float $yaw) : self`
+  - `rotationTo(Vector3 $target) : self` – compute and set rotation so the camera at the current position looks at the given world-space target.
   - `facing(Vector3 $position) : self`
   - `viewOffset(Vector2 $offset) : self`
   - `entityOffset(Vector3 $offset) : self`

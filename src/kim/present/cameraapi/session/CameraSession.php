@@ -149,13 +149,15 @@ final class CameraSession{
     /**
      * Stops all active timeline tasks associated with this session.
      */
-    public function stop() : void{
+    public function stop() : self{
         foreach($this->activeTasks as $task){
             if(!$task->isCancelled()){
                 $task->cancel();
             }
         }
         $this->activeTasks = [];
+
+        return $this;
     }
 
     /**

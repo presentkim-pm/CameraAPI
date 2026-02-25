@@ -63,7 +63,16 @@ final class CameraTimeline{
 
     /** @var array<int, array{float, \Closure}> */
     private array $queue = [];
-    private float $currentTime = 0.0;
+    /**
+     * Logical time cursor in seconds.
+     *
+     * This value represents the current offset (in seconds) from the start of
+     * the timeline when scheduling new actions. Every call to {@see wait()}
+     * advances this cursor, and {@see add()} records actions at the current
+     * cursor. After construction, the final value equals the total timeline
+     * duration, which is also used when looping.
+     */
+    private float $timelineLengthSeconds = 0.0;
     private bool $loop = false;
 
     public function __construct(){}
@@ -76,7 +85,7 @@ final class CameraTimeline{
      * @return self
      */
     public function wait(float $seconds) : self{
-        $this->currentTime += $seconds;
+        $this->timelineLengthSeconds += $seconds;
         return $this;
     }
 
@@ -88,7 +97,7 @@ final class CameraTimeline{
      * @return self For chaining.
      */
     public function add(\Closure $action) : self{
-        $this->queue[] = [$this->currentTime, $action];
+        $this->queue[] = [$this->timelineLengthSeconds, $action];
         return $this;
     }
 
@@ -250,8 +259,8 @@ final class CameraTimeline{
         }
 
         // Automatically loop the entire sequence if requested.
-        if($this->loop && $this->currentTime > 0){
-            $totalTicks = (int) ($this->currentTime * 20);
+        if($this->loop && $this->timelineLengthSeconds > 0){
+            $totalTicks = (int) ($this->timelineLengthSeconds * 20);
             $loopTask = $scheduler->scheduleDelayedTask(new ClosureTask(function() use ($session) : void{
                 if($session->getPlayer() !== null && $session->getPlayer()->isConnected()){
                     $this->play($session);

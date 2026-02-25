@@ -137,7 +137,7 @@ final class CameraSession{
     /**
      * Sends a packet to the player if they are online.
      *
-     * @param ClientboundPacket $pk
+     * @param ClientboundPacket $pk The packet to send (e.g. CameraInstructionPacket, CameraShakePacket).
      */
     public function sendPacket(ClientboundPacket $pk) : void{
         $player = $this->getPlayer();
@@ -159,9 +159,9 @@ final class CameraSession{
     }
 
     /**
-     * Registers a timeline task to be managed by this session.
+     * Registers a timeline task to be managed by this session (cancelled when {@see self::stop()} is called).
      *
-     * @param TaskHandler $task
+     * @param TaskHandler $task The scheduled task handle returned by the scheduler.
      */
     public function addTimelineTask(TaskHandler $task) : void{
         $this->activeTasks[] = $task;

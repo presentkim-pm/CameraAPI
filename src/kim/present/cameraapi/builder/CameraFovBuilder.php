@@ -43,7 +43,7 @@ use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstructionEaseType a
  * ```php
  * $session->fov()
  *     ->set(90.0)
- *     ->ease(EaseType::IN_CUBIC, 1.0)
+ *     ->ease(CameraSetInstructionEaseType::IN_CUBIC, 1.0)
  *     ->send();
  * ```
  */

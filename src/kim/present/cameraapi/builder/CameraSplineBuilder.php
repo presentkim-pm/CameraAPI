@@ -49,7 +49,7 @@ use pocketmine\network\mcpe\protocol\types\camera\CameraSplineInstruction;
  * $session->spline()
  *     ->time(5.0)
  *     ->addPoint($p1)->addPoint($p2)->addPoint($p3)
- *     ->ease(EaseType::LINEAR)
+ *     ->ease(CameraSetInstructionEaseType::LINEAR)
  *     ->send();
  * ```
  *
@@ -85,7 +85,7 @@ final class CameraSplineBuilder{
     /**
      * Sets the easing type for the movement along the spline.
      *
-     * @param int $type The easing type (see {@link EaseType} constants).
+     * @param int $type The easing type (see {@link CameraSetInstructionEaseType} constants).
      *
      * @return self
      */

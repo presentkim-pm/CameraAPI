@@ -52,7 +52,7 @@ use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstructionRotation;
  *     ->preset("minecraft:free")
  *     ->position($pos)
  *     ->rotation(90, 0)
- *     ->ease(EaseType::LINEAR, 2.0)
+ *     ->ease(CameraSetInstructionEaseType::LINEAR, 2.0)
  *     ->send();
  * ```
  */
@@ -86,7 +86,7 @@ final class CameraSetBuilder{
     /**
      * Sets the easing animation for the camera movement.
      *
-     * @param int   $type     The easing type (see {@link EaseType} constants).
+     * @param int   $type     The easing type (see {@link CameraSetInstructionEaseType} constants).
      * @param float $duration The duration of the transition in seconds.
      *
      * @return self

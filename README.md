@@ -40,6 +40,7 @@
     `CameraSplineBuilder` (experimental / discouraged).
   - `CameraTimeline` – utility to queue and play camera instructions over time (cutscenes).
   - `CameraPresetRegistry` / `CameraPresetBuilder` – registration and synchronization of camera presets with the client.
+  - `CameraMarker` – in-world helper entity (fake player) to place and preview camera viewpoints; supports interact and attack callbacks.
 
 ---
 
@@ -127,7 +128,7 @@ $session->set()
     ->preset("minecraft:free")
     ->position($pos)
     ->rotation(30, 90)
-    ->ease(EaseType::LINEAR, 2.0)
+    ->ease(CameraSetInstructionEaseType::LINEAR, 2.0)
     ->send();
 ```
 
@@ -291,6 +292,72 @@ $id = CameraPresetRegistry::getIdByName("myplugin:topdown"); // int|null
 
 `CameraSetBuilder::preset()` internally uses `getIdByName()`, so in most cases you only need to pass the preset name
 string.
+
+---
+
+### 5. Camera markers (in-world placement)
+
+Camera markers are small in-world entities you can spawn to define camera positions and orientations. They appear as
+fake players (with a plugin-supplied skin), support yaw/pitch from the spawn location, and can have an interact button
+and callbacks for left-click (attack) and right-click (interact). Use them for map creation or cutscene keyframes.
+
+- **Spawning**: `Camera::spawnMarker(Location $location, ?string $label = null) : CameraMarker`
+  - `$location` – world position and rotation (yaw/pitch) for the marker; e.g. use the player's location (optionally
+    offset to eye height) so the marker faces the same direction.
+- **Methods on `CameraMarker`**
+  - `setPosition(Vector3 $pos)`, `lookAt(Vector3 $target)`, `setNameTag(string $name)`, `setInteractButton(string $buttonText)`
+  - `setOnAttack(?\Closure $onAttack)` – callback when a player left-clicks the marker (e.g. remove it).
+  - `setOnClick(?\Closure $onClick)` – callback when a player right-clicks the marker (e.g. apply marker to camera and play a timeline).
+  - `applyToSession(CameraSession $session, ?int $easeType = null, ?float $easeDuration = null)` – sets the camera to the marker's position and rotation (vanilla FREE preset). Optionally pass an ease type (e.g. `CameraSetInstructionEaseType::LINEAR`) and duration in seconds for a smooth transition.
+  - `remove()` – despawns the marker.
+
+**Example: create a marker, remove on attack, preview on interact**
+
+```php
+use kim\present\cameraapi\Camera;
+use kim\present\cameraapi\marker\CameraMarker;
+use kim\present\cameraapi\session\CameraSession;
+use pocketmine\player\Player;
+use pocketmine\utils\TextFormat;
+
+// Create a marker at the player's eye position, facing the same direction
+$markerLocation = $sender->getLocation();
+$markerLocation->y += $sender->getEyeHeight();
+$this->markers[$markerName] = Camera::spawnMarker($markerLocation, $markerName)
+    ->setOnAttack(function($_, Player $player) use ($markerName) : void{
+        $this->markers[$markerName]->remove();
+        unset($this->markers[$markerName]);
+        $player->sendMessage(TextFormat::GREEN . "Removed '$markerName' camera marker.");
+    })
+    ->setInteractButton("Test")
+    ->setOnClick(fn(CameraMarker $marker, Player $player) => Camera::timeline()
+        ->add(fn(CameraSession $session) => $marker->applyToSession($session))
+        ->wait(3)
+        ->clear()
+        ->play($player)
+    );
+$sender->sendMessage(TextFormat::GREEN . "Created '$markerName' camera marker.");
+```
+
+- Right-clicking the marker applies its pose to the player's camera, holds for 3 seconds, then clears. Left-clicking
+  removes the marker.
+
+**Using ease for smooth transitions**
+
+You can pass an ease type and duration so the camera moves smoothly to the marker's pose instead of snapping:
+
+```php
+use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstructionEaseType as EaseType;
+
+// Instant (default)
+$marker->applyToSession($session);
+
+// 1.5 second linear transition to the marker's position and rotation
+$marker->applyToSession($session, EaseType::LINEAR, 1.5);
+
+// 2 second cubic ease-in transition
+$marker->applyToSession($session, EaseType::IN_CUBIC, 2.0);
+```
 
 ---
 

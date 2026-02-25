@@ -27,8 +27,10 @@ declare(strict_types=1);
 
 namespace kim\present\cameraapi;
 
+use kim\present\cameraapi\entity\CameraMarkerEntity;
 use kim\present\cameraapi\preset\CameraPresetRegistry;
 use kim\present\cameraapi\session\CameraSessionManager;
+use pocketmine\entity\Skin;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
@@ -42,8 +44,16 @@ use pocketmine\utils\SingletonTrait;
 final class Main extends PluginBase implements Listener{
     use SingletonTrait;
 
+    /** @throws \JsonException */
     protected function onLoad() : void{
         self::setInstance($this);
+
+        CameraMarkerEntity::setSkin(new Skin(
+            skinId: "cameraapi:camera_marker",
+            skinData: file_get_contents($this->getResourceFolder() . "camera_marker.skindata"),
+            geometryName: 'geometry.camera_marker',
+            geometryData: file_get_contents($this->getResourceFolder() . "camera_marker.geo.json"),
+        ));
     }
 
     protected function onEnable() : void{

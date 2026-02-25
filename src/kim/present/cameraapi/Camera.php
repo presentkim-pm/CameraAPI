@@ -27,10 +27,15 @@ declare(strict_types=1);
 
 namespace kim\present\cameraapi;
 
+use kim\present\cameraapi\entity\CameraMarkerEntity;
+use kim\present\cameraapi\marker\CameraMarker;
 use kim\present\cameraapi\session\CameraSession;
 use kim\present\cameraapi\session\CameraSessionManager;
 use kim\present\cameraapi\timeline\CameraTimeline;
+use pocketmine\entity\Location;
+use pocketmine\math\Vector3;
 use pocketmine\player\Player;
+use pocketmine\world\World;
 
 /**
  * Main entry point for the CameraAPI plugin.
@@ -70,6 +75,49 @@ final class Camera{
      */
     public static function timeline() : CameraTimeline{
         return new CameraTimeline();
+    }
+
+    /**
+     * Spawns a small helper marker entity that can be used to define camera
+     * positions and orientations in the world.
+     *
+     * The marker:
+     * - Uses a fake-player representation (no custom resource pack required).
+     * - Is static and damage-immune.
+     * - Supports optional interact button and on-attack / on-click callbacks via the returned {@link CameraMarker}.
+     *
+     * @param Location    $location World coordinates (and yaw/pitch) where the marker should appear.
+     * @param string|null $label    Optional name tag shown above the marker.
+     *
+     * @return CameraMarker Wrapper to move, rotate, apply to a session, or remove the marker.
+     */
+    public static function spawnMarker(Location $location, ?string $label = null) : CameraMarker{
+        $world = $location->getWorld();
+        self::ensureChunkLoaded($world, $location);
+
+        $entity = new CameraMarkerEntity($location);
+
+        if($label !== null){
+            $entity->setNameTag($label);
+        }
+
+        $entity->spawnToAll();
+
+        return new CameraMarker($entity);
+    }
+
+    /**
+     * Ensures the chunk at the given position is loaded so an entity can be spawned.
+     *
+     * @param World   $world The world to load the chunk in.
+     * @param Vector3 $pos   Position (x, z used for chunk coordinates).
+     */
+    private static function ensureChunkLoaded(World $world, Vector3 $pos) : void{
+        $cx = $pos->getFloorX() >> 4;
+        $cz = $pos->getFloorZ() >> 4;
+        if(!$world->isChunkLoaded($cx, $cz)){
+            $world->loadChunk($cx, $cz);
+        }
     }
 
 }

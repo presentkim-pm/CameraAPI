@@ -125,6 +125,8 @@ The session keeps camera context per player and provides builders and utility me
   - `fov() : CameraFovBuilder`
   - `fog() : CameraFogBuilder` – manage client-side fog (atmosphere) layers (see §2.5).
   - `controlScheme(ClientboundControlSchemeSetPacket $packet) : self` – send a control scheme packet (see §2.7).
+  - `attachToEntity(Entity|int $entityOrRuntimeId) : self` – attach camera to an entity or runtime ID, e.g. POV spectator (see §2.8).
+  - `detachFromEntity() : self` – detach camera from the current entity (see §2.8).
   - `hud(HudPreset|string $presetOrName) : self` – apply a HUD preset by instance or registry name (see §6).
   - `spline() : CameraSplineBuilder` (**deprecated**, do not use in production)
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
@@ -308,6 +310,29 @@ $session->controlScheme(ControlSchemePackets::CAMERA_RELATIVE());
   - `PLAYER_RELATIVE` – player-relative (requires `fixed_boom`).
   - `PLAYER_RELATIVE_STRAFE` – player-relative with strafe (requires `fixed_boom`).
 
+#### 2.8 Attach / Detach entity: `attachToEntity(Entity|int)` and `detachFromEntity()`
+
+Attaches the player's camera to an entity so they see through that entity's eyes (POV spectator). Accepts either an `Entity` (uses its runtime ID via `getId()`) or an `int` runtime ID directly. The entity must exist and be visible to the client when the packet is sent.
+
+```php
+use kim\present\cameraapi\Camera;
+use pocketmine\entity\Entity;
+
+$session = Camera::of($player);
+
+// Attach camera to another player or entity (see through their eyes)
+$session->attachToEntity($targetEntity);
+
+// Or pass the entity runtime ID directly
+$session->attachToEntity($targetEntity->getId());
+
+// Later: detach and return to normal view
+$session->detachFromEntity();
+```
+
+- **attachToEntity(Entity|int $entityOrRuntimeId) : self** – sends a camera instruction to attach to the given entity (uses `getId()`) or runtime ID.
+- **detachFromEntity() : self** – sends a camera instruction to detach from the current entity.
+
 ---
 
 ### 3. `CameraTimeline` (Cutscenes / Sequences)
@@ -340,6 +365,8 @@ $timeline->play($player);
   - `fov(\Closure(CameraFovBuilder): void $setup) : self`
   - `fog(\Closure(CameraFogBuilder): void $setup) : self` – add a fog instruction (push/remove layers) at this point in the timeline.
   - `controlScheme(ClientboundControlSchemeSetPacket $packet) : self` – send a control scheme packet at this point (use `ControlSchemePackets::…()`).
+  - `attachToEntity(Entity|int $entityOrRuntimeId) : self` – attach camera to the entity or runtime ID at this point in the timeline.
+  - `detachFromEntity() : self` – detach camera from the entity at this point.
   - `spline(\Closure(CameraSplineBuilder): void $setup) : self`
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
   - `stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : self`

@@ -36,6 +36,7 @@ use kim\present\cameraapi\camera\builder\CameraTargetBuilder;
 use kim\present\cameraapi\hud\HudPreset;
 use kim\present\cameraapi\hud\HudPresetRegistry;
 use kim\present\cameraapi\timeline\CameraTimeline;
+use pocketmine\entity\Entity;
 use pocketmine\network\mcpe\protocol\CameraInstructionPacket;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
 use pocketmine\network\mcpe\protocol\ClientboundControlSchemeSetPacket;
@@ -136,6 +137,49 @@ final class CameraSession{
      */
     public function controlScheme(ClientboundControlSchemeSetPacket $packet) : self{
         return $this->sendPacket($packet);
+    }
+
+    /**
+     * Attaches the camera to the given entity or runtime ID (e.g. POV spectator – see through the entity's eyes).
+     * The client will use the entity's position and rotation for the camera until detached.
+     *
+     * @param Entity|int $entityOrRuntimeId The entity to attach to (uses its runtime ID), or the entity runtime ID
+     *                                      directly.
+     *
+     * @return self
+     */
+    public function attachToEntity(Entity|int $entityOrRuntimeId) : self{
+        $runtimeId = $entityOrRuntimeId instanceof Entity ? $entityOrRuntimeId->getId() : $entityOrRuntimeId;
+        return $this->sendPacket(CameraInstructionPacket::create(
+            set: null,
+            clear: null,
+            fade: null,
+            target: null,
+            removeTarget: null,
+            fieldOfView: null,
+            spline: null,
+            attachToEntity: $runtimeId,
+            detachFromEntity: null
+        ));
+    }
+
+    /**
+     * Detaches the camera from the currently attached entity and returns to normal control.
+     *
+     * @return self
+     */
+    public function detachFromEntity() : self{
+        return $this->sendPacket(CameraInstructionPacket::create(
+            set: null,
+            clear: null,
+            fade: null,
+            target: null,
+            removeTarget: null,
+            fieldOfView: null,
+            spline: null,
+            attachToEntity: null,
+            detachFromEntity: true
+        ));
     }
 
     /**

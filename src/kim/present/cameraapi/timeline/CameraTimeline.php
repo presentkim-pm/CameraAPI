@@ -36,6 +36,7 @@ use kim\present\cameraapi\camera\builder\CameraSplineBuilder;
 use kim\present\cameraapi\camera\builder\CameraTargetBuilder;
 use kim\present\cameraapi\Main;
 use kim\present\cameraapi\session\CameraSession;
+use pocketmine\entity\Entity;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
 use pocketmine\network\mcpe\protocol\ClientboundControlSchemeSetPacket;
 use pocketmine\player\Player;
@@ -269,6 +270,32 @@ final class CameraTimeline{
     public function controlScheme(ClientboundControlSchemeSetPacket $packet) : self{
         return $this->add(function(CameraSession $session) use ($packet) : void{
             $session->controlScheme($packet);
+        });
+    }
+
+    /**
+     * Adds an instruction to attach the camera to the given entity or runtime ID at this point in the timeline (e.g.
+     * POV spectator). When an entity is passed, it should still exist when this step runs; when an int is passed, it
+     * is used as the runtime ID as-is.
+     *
+     * @param Entity|int $entityOrRuntimeId The entity to attach to, or the entity runtime ID directly.
+     *
+     * @return self
+     */
+    public function attachToEntity(Entity|int $entityOrRuntimeId) : self{
+        return $this->add(function(CameraSession $session) use ($entityOrRuntimeId) : void{
+            $session->attachToEntity($entityOrRuntimeId);
+        });
+    }
+
+    /**
+     * Adds an instruction to detach the camera from the current entity at this point in the timeline.
+     *
+     * @return self
+     */
+    public function detachFromEntity() : self{
+        return $this->add(function(CameraSession $session) : void{
+            $session->detachFromEntity();
         });
     }
 

@@ -37,7 +37,7 @@
   - `Camera::of(Player)` – main entry point to obtain a camera session for a player.
   - `CameraSession` – per-player object that manages camera state and scheduled tasks.
   - Builders – `CameraSetBuilder`, `CameraFadeBuilder`, `CameraTargetBuilder`, `CameraFovBuilder`,
-    `CameraSplineBuilder` (experimental / discouraged).
+    `CameraFogBuilder`, `CameraSplineBuilder` (experimental / discouraged).
   - `CameraTimeline` – utility to queue and play camera instructions over time (cutscenes).
   - `CameraPresetRegistry` / `CameraPresetBuilder` – registration and synchronization of camera presets with the client.
   - `CameraMarker` – in-world helper entity (fake player) to place and preview camera viewpoints; supports interact and attack callbacks.
@@ -123,6 +123,7 @@ The session keeps camera context per player and provides builders and utility me
   - `fade() : CameraFadeBuilder`
   - `target() : CameraTargetBuilder`
   - `fov() : CameraFovBuilder`
+  - `fog() : CameraFogBuilder` – manage client-side fog (atmosphere) layers (see §2.5).
   - `hud(HudPreset|string $presetOrName) : self` – apply a HUD preset by instance or registry name (see §6).
   - `spline() : CameraSplineBuilder` (**deprecated**, do not use in production)
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
@@ -237,7 +238,36 @@ $session->fov()
   - `ease(int $type, float $duration) : self`
   - `send() : CameraSession`
 
-#### 2.5 Shake / Reset
+#### 2.5 Fog (atmosphere): `fog() : CameraFogBuilder`
+
+Controls client-side fog layers (e.g. vanilla biome fogs like Nether or Crimson Forest). Fog is managed as a stack: you push fog IDs and remove them by the same ID; `send()` transmits the current stack as a single packet.
+
+```php
+// Add fog (e.g. Nether-style atmosphere)
+$session->fog()
+    ->push("minecraft:fog_hell")
+    ->send();
+
+// Remove a fog layer
+$session->fog()
+    ->remove("minecraft:fog_hell")
+    ->send();
+
+// Multiple layers (stack order preserved)
+$session->fog()
+    ->push("minecraft:fog_crimson_forest")
+    ->push("minecraft:fog_hell")
+    ->send();
+```
+
+- **Methods**
+  - `push(string $fogId) : self` – add a fog layer (vanilla or resource pack fog ID, e.g. `"minecraft:fog_crimson_forest"`).
+  - `remove(string $fogId) : self` – remove all layers with the given fog ID from the stack.
+  - `send() : CameraSession` – send the current fog stack to the client.
+
+- **Common vanilla fog IDs** (resource-pack dependent): `minecraft:fog_hell`, `minecraft:fog_crimson_forest`, `minecraft:fog_warped_forest`, etc.
+
+#### 2.6 Shake / Reset
 
 ```php
 // Apply camera shake
@@ -280,6 +310,7 @@ $timeline->play($player);
   - `fade(\Closure(CameraFadeBuilder): void $setup) : self`
   - `target(\Closure(CameraTargetBuilder): void $setup) : self`
   - `fov(\Closure(CameraFovBuilder): void $setup) : self`
+  - `fog(\Closure(CameraFogBuilder): void $setup) : self` – add a fog instruction (push/remove layers) at this point in the timeline.
   - `spline(\Closure(CameraSplineBuilder): void $setup) : self`
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
   - `stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
@@ -744,7 +775,7 @@ class IntroListener implements Listener{
 }
 ```
 
-### Example 2. Boss cutscene timeline
+### Example 2. Boss cutscene timeline (with fog)
 
 ```php
 use kim\present\cameraapi\timeline\CameraTimeline;
@@ -762,9 +793,11 @@ function playBossCutscene(Player $player, Vector3 $bossPos) : void{
             ->position($bossPos->add(0, 15, -10))
             ->facing($bossPos)
         )
+        ->fog(fn($b) => $b->push("minecraft:fog_hell"))  // Add Nether-style fog for the boss phase
         ->wait(3.0)
         ->shake(0.7, 2.0)
         ->wait(1.0)
+        ->fog(fn($b) => $b->remove("minecraft:fog_hell")) // Clear fog before reset
         ->clear();
 
     $timeline->play($player);

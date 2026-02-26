@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace kim\present\cameraapi\session;
 
 use kim\present\cameraapi\builder\CameraFadeBuilder;
+use kim\present\cameraapi\builder\CameraFogBuilder;
 use kim\present\cameraapi\builder\CameraFovBuilder;
 use kim\present\cameraapi\builder\CameraSetBuilder;
 use kim\present\cameraapi\builder\CameraSplineBuilder;
@@ -88,6 +89,16 @@ final class CameraSession{
      */
     public function fov() : CameraFovBuilder{
         return new CameraFovBuilder($this);
+    }
+
+    /**
+     * Creates a builder for managing client-side Fog effects.
+     * Used to push or remove fog settings.
+     *
+     * @return CameraFogBuilder
+     */
+    public function fog() : CameraFogBuilder{
+        return new CameraFogBuilder($this);
     }
 
     /**

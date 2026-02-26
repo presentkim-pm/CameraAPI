@@ -28,6 +28,7 @@ declare(strict_types=1);
 namespace kim\present\cameraapi\timeline;
 
 use kim\present\cameraapi\builder\CameraFadeBuilder;
+use kim\present\cameraapi\builder\CameraFogBuilder;
 use kim\present\cameraapi\builder\CameraFovBuilder;
 use kim\present\cameraapi\builder\CameraSetBuilder;
 use kim\present\cameraapi\builder\CameraSplineBuilder;
@@ -191,6 +192,21 @@ final class CameraTimeline{
     public function fov(\Closure $setup) : self{
         return $this->add(function(CameraSession $session) use ($setup){
             $builder = new CameraFovBuilder($session);
+            $setup($builder);
+            $builder->send();
+        });
+    }
+
+    /**
+     * Adds a 'Fog' instruction to the timeline.
+     *
+     * @param \Closure(CameraFogBuilder): void $setup Callback to configure the builder.
+     *
+     * @return self
+     */
+    public function fog(\Closure $setup) : self{
+        return $this->add(function(CameraSession $session) use ($setup){
+            $builder = new CameraFogBuilder($session);
             $setup($builder);
             $builder->send();
         });

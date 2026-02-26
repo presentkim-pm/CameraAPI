@@ -559,6 +559,118 @@ $marker->applyToSession($session, EaseType::IN_CUBIC, 2.0);
 
 ---
 
+### 6. HUD presets (utility)
+
+CameraAPI provides **HUD presets**: immutable layouts that describe which `HudElement` entries should be visible.  
+They can be applied directly to a `Player` or `CameraSession` via `send()`, and optional presets can be stored in `HudPresetRegistry`.
+
+- **Classes**
+  - `kim\present\cameraapi\hud\HudPreset` – immutable preset value object
+  - `kim\present\cameraapi\hud\HudPresetBuilder` – fluent builder for presets
+  - `kim\present\cameraapi\hud\HudPresetRegistry` – string-keyed registry of presets
+
+**HudPreset**
+
+- `readonly` class with one `bool` property per HUD element:
+  - `paperDoll`, `armor`, `tooltips`, `touchControls`, `crosshair`, `hotbar`,
+    `health`, `xp`, `food`, `airBubbles`, `horseHealth`, `statusEffects`, `itemText`
+- Constructor defaults every flag to `true` so you can use **named parameters** to turn off only what you need:
+
+```php
+use kim\present\cameraapi\hud\HudPreset;
+
+// Hide everything (e.g. for a clean cinematic shot)
+$clear = new HudPreset(
+    paperDoll: false,
+    armor: false,
+    tooltips: false,
+    touchControls: false,
+    crosshair: false,
+    hotbar: false,
+    health: false,
+    xp: false,
+    food: false,
+    airBubbles: false,
+    horseHealth: false,
+    statusEffects: false,
+    itemText: false,
+);
+
+$clear->send($player);
+// or
+$clear->send(Camera::of($player));
+```
+
+- **`send(CameraSession|Player $target) : void`**  
+  Applies this preset to the target: hides all known HUD elements, then re-enables those flagged `true` in this preset. No-op if the player is offline or disconnected.
+
+- **`getVisibleElements() : list<HudElement>`**  
+  Returns the list of `HudElement` enum cases that are enabled in this preset.
+
+- **`fromVisibleElements(list<HudElement> $visibleElements) : self`**  
+  Static factory: builds a preset where only the given HUD elements are visible; all others are hidden.
+
+**HudPresetBuilder**
+
+Fluent builder if you prefer a chainable API over named parameters:
+
+- **`create() : self`** – new builder with all elements enabled.
+- **Per-element setters** – `paperDoll(bool $value = true)`, `armor(bool $value = true)`, …, `itemText(bool $value = true)`.
+- **`hideAll() : self`** – sets every element to false.
+- **`build() : HudPreset`** – returns an immutable preset from the current state.
+
+```php
+use kim\present\cameraapi\hud\HudPresetBuilder;
+
+$minimal = HudPresetBuilder::create()
+    ->hideAll()
+    ->hotbar(true)
+    ->health(true)
+    ->build();
+
+$minimal->send($player);
+```
+
+**HudPresetRegistry**
+
+- **Built-in presets**
+  - `HudPresetRegistry::PRESET_DEFAULT` – all HUD elements visible (`new HudPreset()`).
+  - `HudPresetRegistry::PRESET_CLEAR` – all HUD elements hidden (`HudPreset::fromVisibleElements([])`).
+
+- **API**
+  - `register(string $name, HudPreset $preset) : void` – register or overwrite a preset by name (case-insensitive).
+  - `get(string $name) : ?HudPreset` – get a preset by name.
+  - `isRegistered(string $name) : bool` – whether a preset with that name exists.
+  - `getAll() : array<string, HudPreset>` – all registered presets (built-in + custom), keyed by lowercased name.
+
+**Example – registry and custom preset**
+
+```php
+use kim\present\cameraapi\hud\HudPresetRegistry;
+
+// Apply built-in “all hidden” preset
+$preset = HudPresetRegistry::get(HudPresetRegistry::PRESET_CLEAR);
+if($preset !== null){
+    $preset->send($player);
+}
+```
+
+```php
+use kim\present\cameraapi\hud\HudPresetBuilder;
+use kim\present\cameraapi\hud\HudPresetRegistry;
+
+// Register a custom preset and use it later
+$minimal = HudPresetBuilder::create()->hideAll()->hotbar(true)->build();
+HudPresetRegistry::register("minimal_hotbar", $minimal);
+
+$preset = HudPresetRegistry::get("minimal_hotbar");
+if($preset !== null){
+    $preset->send($player);
+}
+```
+
+---
+
 ## Implementation & Architecture Overview
 
 - **Plugin entry (`Main`)**

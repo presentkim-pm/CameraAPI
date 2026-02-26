@@ -101,6 +101,16 @@ $session = Camera::of($player);
 $session->clear(); // Reset camera to default
 ```
 
+- **Timeline helpers**
+
+```php
+Camera::timeline() : CameraTimeline
+Camera::loadTimeline(string $json) : CameraTimeline
+```
+
+- `timeline()` creates an empty, code-driven timeline.
+- `loadTimeline()` builds a timeline from a JSON description using `CameraTimelineParser`.
+
 ---
 
 ### 2. `CameraSession`
@@ -325,6 +335,105 @@ public function onBossSpawn(BossSpawnEvent $event) : void{
 **Notes**  
 - `waitUntil()` executes the timeline in **chunks (segments between signals)** and stops scheduling the next chunk until the specified signal is emitted.  
 - This allows you to implement complex cutscene state machines **without any per-tick polling**.
+
+#### 3.2 Data-driven timelines (JSON)
+
+You can also describe timelines in JSON (or arrays) and load them at runtime.  
+This is useful if non-programmers (builders / designers) need to tweak cutscenes without touching PHP code.
+
+**Supported JSON step types**
+
+- `wait` – `{ "type": "wait", "seconds": 2.0 }`
+- `waitUntil` – `{ "type": "waitUntil", "signal": "boss_spawned" }`
+- `shake` – `{ "type": "shake", "intensity": 0.8, "duration": 1.5 }`
+- `stopShake` – `{ "type": "stopShake" }`
+- `clear` – `{ "type": "clear" }`
+- `set` – camera position / preset:
+
+  ```json
+  {
+    "type": "set",
+    "preset": "minecraft:free",
+    "position": [100, 60, 100],
+    "rotation": [30, 90],
+    "facing": [100, 60, 120],
+    "ease": { "type": 0, "duration": 1.0 }
+  }
+  ```
+
+- `fade` – screen fade:
+
+  ```json
+  {
+    "type": "fade",
+    "in": 0.5,
+    "stay": 1.0,
+    "out": 0.5
+  }
+  ```
+
+- `fov` – field of view:
+
+  ```json
+  {
+    "type": "fov",
+    "set": 90.0,
+    "ease": { "type": 0, "duration": 1.0 }
+  }
+  ```
+
+**Full example – `boss_intro.json`**
+
+```json
+{
+  "loop": false,
+  "steps": [
+    {
+      "type": "fade",
+      "in": 0.5,
+      "stay": 1.0,
+      "out": 0.5
+    },
+    {
+      "type": "set",
+      "preset": "minecraft:free",
+      "position": [100, 60, 100],
+      "rotation": [30, 90]
+    },
+    {
+      "type": "fov",
+      "set": 90.0,
+      "ease": { "type": 0, "duration": 1.0 }
+    },
+    {
+      "type": "wait",
+      "seconds": 2.0
+    },
+    {
+      "type": "shake",
+      "intensity": 0.8,
+      "duration": 1.5
+    },
+    {
+      "type": "wait",
+      "seconds": 1.5
+    },
+    {
+      "type": "clear"
+    }
+  ]
+}
+```
+
+**Loading a JSON timeline**
+
+```php
+use kim\present\cameraapi\Camera;
+
+$json = file_get_contents($this->getDataFolder() . "cutscenes/boss_intro.json");
+$timeline = Camera::loadTimeline($json);
+$timeline->play($player);
+```
 
 ---
 

@@ -32,6 +32,7 @@ use kim\present\cameraapi\marker\CameraMarker;
 use kim\present\cameraapi\session\CameraSession;
 use kim\present\cameraapi\session\CameraSessionManager;
 use kim\present\cameraapi\timeline\CameraTimeline;
+use kim\present\cameraapi\timeline\CameraTimelineParser;
 use pocketmine\entity\Location;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
@@ -75,6 +76,24 @@ final class Camera{
      */
     public static function timeline() : CameraTimeline{
         return new CameraTimeline();
+    }
+
+    /**
+     * Creates a timeline from a JSON string using {@see CameraTimelineParser}.
+     *
+     * This is a convenience entry point for loading cutscenes described in
+     * external JSON files.
+     *
+     * Example:
+     *  $json = file_get_contents($this->getDataFolder() . "cutscenes/boss_intro.json");
+     *  $timeline = Camera::loadTimeline($json);
+     *
+     * @param string $json JSON string describing the timeline.
+     *
+     * @return CameraTimeline
+     */
+    public static function loadTimeline(string $json) : CameraTimeline{
+        return CameraTimelineParser::fromJson($json);
     }
 
     /**

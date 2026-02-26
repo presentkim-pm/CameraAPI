@@ -9,6 +9,7 @@ use kim\present\cameraapi\builder\CameraFovBuilder;
 use kim\present\cameraapi\builder\CameraSetBuilder;
 use kim\present\cameraapi\builder\CameraSplineBuilder;
 use kim\present\cameraapi\builder\CameraTargetBuilder;
+use kim\present\cameraapi\timeline\CameraTimeline;
 use pocketmine\network\mcpe\protocol\CameraInstructionPacket;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
@@ -26,6 +27,10 @@ final class CameraSession{
     /** @var TaskHandler[] */
     private array $activeTasks = [];
     private \WeakReference $playerRef;
+    private ?string $waitingSignal = null;
+    /** @var array<int, array{float, \Closure|string}> */
+    private array $pausedTimelineQueue = [];
+    private ?CameraTimeline $pausedTimeline = null;
 
     /**
      * @param Player $player The player associated with this session.
@@ -157,6 +162,10 @@ final class CameraSession{
         }
         $this->activeTasks = [];
 
+        $this->waitingSignal = null;
+        $this->pausedTimelineQueue = [];
+        $this->pausedTimeline = null;
+
         return $this;
     }
 
@@ -167,5 +176,38 @@ final class CameraSession{
      */
     public function addTimelineTask(TaskHandler $task) : void{
         $this->activeTasks[] = $task;
+    }
+
+    /**
+     * @internal Called by {@see CameraTimeline} when a signal wait is encountered.
+     *
+     * @param string $signalName
+     * @param array<int, array{float, \Closure|string}> $remainingQueue
+     * @param CameraTimeline $timeline
+     */
+    public function setWaitingSignal(string $signalName, array $remainingQueue, CameraTimeline $timeline) : void{
+        $this->waitingSignal = $signalName;
+        $this->pausedTimelineQueue = $remainingQueue;
+        $this->pausedTimeline = $timeline;
+    }
+
+    /**
+     * Emits a signal to this session. If the session is currently waiting for
+     * the given signal, the paused timeline will resume from where it stopped.
+     */
+    public function emitSignal(string $signalName) : void{
+        if($this->waitingSignal !== $signalName || $this->pausedTimeline === null){
+            return;
+        }
+
+        $this->waitingSignal = null;
+
+        $queueToResume = $this->pausedTimelineQueue;
+        $this->pausedTimelineQueue = [];
+
+        $timeline = $this->pausedTimeline;
+        $this->pausedTimeline = null;
+
+        $timeline->playFromQueue($this, $queueToResume);
     }
 }

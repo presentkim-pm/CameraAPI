@@ -61,18 +61,24 @@ use pocketmine\scheduler\ClosureTask;
  */
 final class CameraTimeline{
 
-    /** @var array<int, array{float, \Closure}> */
+    /** @var array<int, array{float, \Closure|string}> */
     private array $queue = [];
     /**
-     * Logical time cursor in seconds.
+     * Total logical timeline length in seconds (sum of all explicit waits).
      *
-     * This value represents the current offset (in seconds) from the start of
-     * the timeline when scheduling new actions. Every call to {@see wait()}
-     * advances this cursor, and {@see add()} records actions at the current
-     * cursor. After construction, the final value equals the total timeline
-     * duration, which is also used when looping.
+     * This is used for loop timing when {@see setLoop()} is enabled.
      */
     private float $timelineLengthSeconds = 0.0;
+    /**
+     * Logical time cursor (in seconds) within the current "chunk" of the
+     * timeline. A chunk is a sequence of actions between {@see waitUntil()}
+     * signal boundaries.
+     *
+     * This value is used when recording actions into the internal queue so
+     * that segments after a signal can be scheduled relative to the moment
+     * the signal is emitted.
+     */
+    private float $chunkCursorSeconds = 0.0;
     private bool $loop = false;
 
     public function __construct(){}
@@ -86,6 +92,21 @@ final class CameraTimeline{
      */
     public function wait(float $seconds) : self{
         $this->timelineLengthSeconds += $seconds;
+        $this->chunkCursorSeconds += $seconds;
+        return $this;
+    }
+
+    /**
+     * Pauses the timeline until a specific signal is emitted for the session.
+     *
+     * Subsequent actions are scheduled relative to the moment the signal
+     * is received (i.e. the logical time is reset for the next chunk).
+     *
+     * @param string $signalName The name of the signal to wait for.
+     */
+    public function waitUntil(string $signalName) : self{
+        $this->queue[] = [$this->chunkCursorSeconds, 'SIGNAL:' . $signalName];
+        $this->chunkCursorSeconds = 0.0;
         return $this;
     }
 
@@ -97,7 +118,7 @@ final class CameraTimeline{
      * @return self For chaining.
      */
     public function add(\Closure $action) : self{
-        $this->queue[] = [$this->timelineLengthSeconds, $action];
+        $this->queue[] = [$this->chunkCursorSeconds, $action];
         return $this;
     }
 
@@ -231,20 +252,24 @@ final class CameraTimeline{
     }
 
     /**
-     * Plays the timeline for the specified player.
-     * This schedules all queued instructions using the server scheduler.
+     * @internal Plays actions from the given queue until a waiting signal is
+     *           encountered or the queue is exhausted.
      *
-     * @param Player|CameraSession $player
-     *
-     * @return void
+     * @param CameraSession $session
+     * @param array<int, array{float, \Closure|string}> $remainingQueue
      */
-    public function play(Player|CameraSession $player) : void{
-        $session = $player instanceof CameraSession ? $player : Camera::of($player);
-        $session->stop(); // Cancel currently running timeline tasks
-
+    public function playFromQueue(CameraSession $session, array &$remainingQueue) : void{
         $scheduler = Main::getInstance()->getScheduler();
 
-        foreach($this->queue as [$delay, $action]){
+        while(($item = \array_shift($remainingQueue)) !== null){
+            [$delay, $action] = $item;
+
+            if(\is_string($action) && \str_starts_with($action, 'SIGNAL:')){
+                $signalName = \substr($action, 7);
+                $session->setWaitingSignal($signalName, $remainingQueue, $this);
+                return;
+            }
+
             $tickDelay = (int) ($delay * 20);
             if($tickDelay <= 0){
                 $action($session);
@@ -258,8 +283,7 @@ final class CameraTimeline{
             }
         }
 
-        // Automatically loop the entire sequence if requested.
-        if($this->loop && $this->timelineLengthSeconds > 0){
+        if($this->loop && $this->timelineLengthSeconds > 0.0){
             $totalTicks = (int) ($this->timelineLengthSeconds * 20);
             $loopTask = $scheduler->scheduleDelayedTask(new ClosureTask(function() use ($session) : void{
                 if($session->getPlayer() !== null && $session->getPlayer()->isConnected()){
@@ -268,5 +292,21 @@ final class CameraTimeline{
             }), $totalTicks);
             $session->addTimelineTask($loopTask);
         }
+    }
+
+    /**
+     * Plays the timeline for the specified player.
+     * This schedules queued instructions in chunks using the server scheduler.
+     *
+     * @param Player|CameraSession $player
+     *
+     * @return void
+     */
+    public function play(Player|CameraSession $player) : void{
+        $session = $player instanceof CameraSession ? $player : Camera::of($player);
+        $session->stop(); // Cancel currently running timeline tasks
+
+        $queueCopy = $this->queue;
+        $this->playFromQueue($session, $queueCopy);
     }
 }

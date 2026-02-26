@@ -251,6 +251,7 @@ $timeline->play($player);
 
 - **Method overview**
   - `wait(float $seconds) : self`
+  - `waitUntil(string $signalName) : self` – pause the timeline until the given signal is emitted for that player's `CameraSession` (see below).
   - `set(\Closure(CameraSetBuilder): void $setup) : self`
   - `fade(\Closure(CameraFadeBuilder): void $setup) : self`
   - `target(\Closure(CameraTargetBuilder): void $setup) : self`
@@ -275,6 +276,55 @@ $timeline
 
 **Note**: `spline()` uses `CameraSplineBuilder` under the hood, which is currently marked **deprecated** due to client
 crash / disconnect issues.
+
+#### 3.1 Signal-based waiting (no per-tick polling)
+
+`waitUntil()` lets you pause a timeline until an external event (boss spawn, door open, etc.) explicitly resumes it.  
+This avoids per-tick polling and integrates cleanly with PocketMine-MP's single-threaded scheduler.
+
+**Concept**
+
+- In the middle of a timeline, insert `->waitUntil("some_signal")`.
+- The timeline stops scheduling further actions when it reaches that point.
+- Later, another plugin or event handler calls `$session->emitSignal("some_signal")` for each player that should resume.
+
+**Example – boss spawn cutscene**
+
+```php
+use kim\present\cameraapi\Camera;
+use pocketmine\math\Vector3;
+use pocketmine\player\Player;
+
+function playBossIntro(Player $player, Vector3 $doorPos, Vector3 $bossPos) : void{
+    $timeline = Camera::timeline()
+        ->set(fn($b) => $b->preset("minecraft:free")->position($doorPos))
+        ->wait(2.0)
+        ->waitUntil("boss_spawned") // pause here until the boss actually spawns
+        ->set(fn($b) => $b->position($bossPos))
+        ->shake(0.8, 2.0)
+        ->wait(2.0)
+        ->clear();
+
+    $timeline->play($player);
+}
+```
+
+In your boss plugin or event listener:
+
+```php
+use kim\present\cameraapi\Camera;
+
+public function onBossSpawn(BossSpawnEvent $event) : void{
+    foreach($event->getPlayersInArena() as $player){
+        $session = Camera::of($player);
+        $session->emitSignal("boss_spawned");
+    }
+}
+```
+
+**Notes**  
+- `waitUntil()` executes the timeline in **chunks (segments between signals)** and stops scheduling the next chunk until the specified signal is emitted.  
+- This allows you to implement complex cutscene state machines **without any per-tick polling**.
 
 ---
 

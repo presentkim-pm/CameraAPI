@@ -483,6 +483,38 @@ This is useful if non-programmers (builders / designers) need to tweak cutscenes
   }
   ```
 
+- `fog` – push and/or remove fog layers (use vanilla IDs e.g. `minecraft:fog_hell`):
+
+  ```json
+  { "type": "fog", "push": ["minecraft:fog_hell"], "remove": [] }
+  ```
+  Omit `push` or `remove`, or use empty arrays. Order: remove then push.
+
+- `controlScheme` – send a control scheme packet. `scheme` must be one of: `LOCKED_PLAYER_RELATIVE_STRAFE`, `CAMERA_RELATIVE`, `CAMERA_RELATIVE_STRAFE`, `PLAYER_RELATIVE`, `PLAYER_RELATIVE_STRAFE`:
+
+  ```json
+  { "type": "controlScheme", "scheme": "LOCKED_PLAYER_RELATIVE_STRAFE" }
+  ```
+
+- `target` – set or clear camera target entity. Use `entityId` (runtime ID). Optional `offset` `[x, y, z]`:
+
+  ```json
+  { "type": "target", "entityId": 42, "offset": [0, 1.6, 0] }
+  ```
+  Omit `entityId` (or use null) to clear target.
+
+- `attachToEntity` – attach camera to an entity by runtime ID (POV spectator). Use `entityId` or `runtimeId`:
+
+  ```json
+  { "type": "attachToEntity", "entityId": 42 }
+  ```
+
+- `detachFromEntity` – detach camera from the current entity:
+
+  ```json
+  { "type": "detachFromEntity" }
+  ```
+
 **Full example – `boss_intro.json`**
 
 ```json

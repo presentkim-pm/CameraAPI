@@ -28,9 +28,12 @@ declare(strict_types=1);
 namespace kim\present\cameraapi\timeline;
 
 use kim\present\cameraapi\camera\builder\CameraFadeBuilder;
+use kim\present\cameraapi\camera\builder\CameraFogBuilder;
 use kim\present\cameraapi\camera\builder\CameraFovBuilder;
 use kim\present\cameraapi\camera\builder\CameraSetBuilder;
+use kim\present\cameraapi\camera\builder\CameraTargetBuilder;
 use kim\present\cameraapi\session\CameraSession;
+use kim\present\cameraapi\utils\ControlSchemePackets;
 use pocketmine\math\Vector3;
 
 /**
@@ -67,7 +70,8 @@ final class CameraTimelineParser{
      *      'loop' => bool,
      *      'steps' => [
      *          [
-     *              'type'   => 'wait' | 'waitUntil' | 'shake' | 'stopShake' | 'clear' | 'set' | 'fade' | 'fov',
+     *              'type'   => 'wait' | 'waitUntil' | 'shake' | 'stopShake' | 'clear' | 'set' | 'fade' | 'fov'
+     *                          | 'fog' | 'controlScheme' | 'target' | 'attachToEntity' | 'detachFromEntity',
      *              // ... additional fields depending on type ...
      *          ],
      *          // ...
@@ -133,6 +137,26 @@ final class CameraTimelineParser{
 
                 case 'fov':
                     self::addFovStep($timeline, $step);
+                    break;
+
+                case 'fog':
+                    self::addFogStep($timeline, $step);
+                    break;
+
+                case 'controlScheme':
+                    self::addControlSchemeStep($timeline, $step);
+                    break;
+
+                case 'target':
+                    self::addTargetStep($timeline, $step);
+                    break;
+
+                case 'attachToEntity':
+                    self::addAttachToEntityStep($timeline, $step);
+                    break;
+
+                case 'detachFromEntity':
+                    $timeline->detachFromEntity();
                     break;
 
                 default:
@@ -257,6 +281,92 @@ final class CameraTimelineParser{
                 $builder->send();
             }
         );
+    }
+
+    /**
+     * Adds a "fog" step to the timeline.
+     *
+     * @param CameraTimeline       $timeline
+     * @param array<string, mixed> $step
+     */
+    private static function addFogStep(CameraTimeline $timeline, array $step) : void{
+        $push = isset($step['push']) && is_array($step['push']) ? array_map('strval', $step['push']) : [];
+        $remove = isset($step['remove']) && is_array($step['remove']) ? array_map('strval', $step['remove']) : [];
+        $timeline->add(
+            function(CameraSession $session) use ($push, $remove) : void{
+                $builder = new CameraFogBuilder($session);
+                foreach($remove as $fogId){
+                    $builder->remove($fogId);
+                }
+                foreach($push as $fogId){
+                    $builder->push($fogId);
+                }
+                $builder->send();
+            }
+        );
+    }
+
+    /**
+     * Adds a "controlScheme" step to the timeline.
+     *
+     * @param CameraTimeline       $timeline
+     * @param array<string, mixed> $step
+     */
+    private static function addControlSchemeStep(CameraTimeline $timeline, array $step) : void{
+        $schemeName = (string) ($step['scheme'] ?? '');
+        if($schemeName === ''){
+            return;
+        }
+        $allowed = [
+            'LOCKED_PLAYER_RELATIVE_STRAFE', 'CAMERA_RELATIVE', 'CAMERA_RELATIVE_STRAFE',
+            'PLAYER_RELATIVE', 'PLAYER_RELATIVE_STRAFE',
+        ];
+        if(!in_array($schemeName, $allowed, true)){
+            return;
+        }
+        $packet = call_user_func([ControlSchemePackets::class, $schemeName]);
+        $timeline->controlScheme($packet);
+    }
+
+    /**
+     * Adds a "target" step to the timeline.
+     *
+     * @param CameraTimeline       $timeline
+     * @param array<string, mixed> $step
+     */
+    private static function addTargetStep(CameraTimeline $timeline, array $step) : void{
+        $timeline->add(
+            function(CameraSession $session) use ($step) : void{
+                $builder = new CameraTargetBuilder($session);
+                if(isset($step['entityId'])){
+                    $builder->entityId((int) $step['entityId']);
+                }else{
+                    $builder->entityId(null);
+                }
+                if(isset($step['offset']) && is_array($step['offset']) && count($step['offset']) >= 3){
+                    $builder->offset(new Vector3(
+                        (float) $step['offset'][0],
+                        (float) $step['offset'][1],
+                        (float) $step['offset'][2]
+                    ));
+                }
+                $builder->send();
+            }
+        );
+    }
+
+    /**
+     * Adds an "attachToEntity" step to the timeline (by runtime ID).
+     *
+     * @param CameraTimeline       $timeline
+     * @param array<string, mixed> $step
+     */
+    private static function addAttachToEntityStep(CameraTimeline $timeline, array $step) : void{
+        $runtimeId = isset($step['entityId']) ? (int) $step['entityId'] : (isset($step['runtimeId']) ? (int) $step['runtimeId'] : null);
+        if($runtimeId === null){
+            return;
+        }
+        $timeline->attachToEntity($runtimeId);
     }
 }
 

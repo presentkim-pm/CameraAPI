@@ -243,30 +243,32 @@ $session->fov()
 
 Controls client-side fog layers (e.g. vanilla biome fogs like Nether or Crimson Forest). Fog is managed as a stack: you push fog IDs and remove them by the same ID; `send()` transmits the current stack as a single packet.
 
+Vanilla fog IDs are available as constants in **`kim\present\cameraapi\utils\VanillaFogIds`** (e.g. `VanillaFogIds::FOG_HELL`, `VanillaFogIds::FOG_CRIMSON_FOREST`, `VanillaFogIds::FOG_THE_END`). See that class for the full list.
+
 ```php
+use kim\present\cameraapi\utils\VanillaFogIds;
+
 // Add fog (e.g. Nether-style atmosphere)
 $session->fog()
-    ->push("minecraft:fog_hell")
+    ->push(VanillaFogIds::FOG_HELL)
     ->send();
 
 // Remove a fog layer
 $session->fog()
-    ->remove("minecraft:fog_hell")
+    ->remove(VanillaFogIds::FOG_HELL)
     ->send();
 
 // Multiple layers (stack order preserved)
 $session->fog()
-    ->push("minecraft:fog_crimson_forest")
-    ->push("minecraft:fog_hell")
+    ->push(VanillaFogIds::FOG_CRIMSON_FOREST)
+    ->push(VanillaFogIds::FOG_HELL)
     ->send();
 ```
 
 - **Methods**
-  - `push(string $fogId) : self` – add a fog layer (vanilla or resource pack fog ID, e.g. `"minecraft:fog_crimson_forest"`).
+  - `push(string $fogId) : self` – add a fog layer (use `VanillaFogIds` for vanilla IDs).
   - `remove(string $fogId) : self` – remove all layers with the given fog ID from the stack.
   - `send() : CameraSession` – send the current fog stack to the client.
-
-- **Common vanilla fog IDs** (resource-pack dependent): `minecraft:fog_hell`, `minecraft:fog_crimson_forest`, `minecraft:fog_warped_forest`, etc.
 
 #### 2.6 Shake / Reset
 
@@ -807,6 +809,7 @@ class IntroListener implements Listener{
 ```php
 use kim\present\cameraapi\timeline\CameraTimeline;
 use kim\present\cameraapi\Camera;
+use kim\present\cameraapi\utils\VanillaFogIds;
 use pocketmine\math\Vector3;
 
 function playBossCutscene(Player $player, Vector3 $bossPos) : void{
@@ -820,11 +823,11 @@ function playBossCutscene(Player $player, Vector3 $bossPos) : void{
             ->position($bossPos->add(0, 15, -10))
             ->facing($bossPos)
         )
-        ->fog(fn($b) => $b->push("minecraft:fog_hell"))  // Add Nether-style fog for the boss phase
+        ->fog(fn($b) => $b->push(VanillaFogIds::FOG_HELL))  // Add Nether-style fog for the boss phase
         ->wait(3.0)
         ->shake(0.7, 2.0)
         ->wait(1.0)
-        ->fog(fn($b) => $b->remove("minecraft:fog_hell")) // Clear fog before reset
+        ->fog(fn($b) => $b->remove(VanillaFogIds::FOG_HELL)) // Clear fog before reset
         ->clear();
 
     $timeline->play($player);

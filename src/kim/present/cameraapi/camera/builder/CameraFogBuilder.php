@@ -28,6 +28,7 @@ declare(strict_types=1);
 namespace kim\present\cameraapi\camera\builder;
 
 use kim\present\cameraapi\session\CameraSession;
+use kim\present\cameraapi\utils\VanillaFogIds;
 use pocketmine\network\mcpe\protocol\PlayerFogPacket;
 
 /**
@@ -36,10 +37,14 @@ use pocketmine\network\mcpe\protocol\PlayerFogPacket;
  * Fog is managed as a stack: push adds layers by fog ID, remove removes by fog ID.
  * send() transmits the current stack as a single PlayerFogPacket.
  *
+ * For vanilla fog IDs use {@see VanillaFogIds}.
+ *
  * Example:
  * ```php
+ * use kim\present\cameraapi\utils\VanillaFogIds;
+ *
  * $session->fog()
- *     ->push("minecraft:fog_hell")
+ *     ->push(VanillaFogIds::FOG_HELL)
  *     ->send();
  * ```
  */
@@ -55,7 +60,7 @@ final class CameraFogBuilder{
     /**
      * Adds a fog layer to the stack (push).
      *
-     * @param string $fogId Vanilla or resource pack fog ID (e.g. "minecraft:fog_crimson_forest")
+     * @param string $fogId Vanilla or resource pack fog ID (see {@see VanillaFogIds})
      *
      * @return self
      */
@@ -67,7 +72,8 @@ final class CameraFogBuilder{
     /**
      * Removes all fog layers with the given fog ID from the stack.
      *
-     * @param string $fogId The fog ID to remove (same as used in push)
+     * @param string $fogId The fog ID to remove (same as used in push; see
+     *                      {@see \kim\present\cameraapi\utils\VanillaFogIds})
      *
      * @return self
      */

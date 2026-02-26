@@ -252,20 +252,21 @@ final class CameraTimeline{
     }
 
     /**
+     * @param CameraSession                             $session
+     * @param array<int, array{float, \Closure|string}> $remainingQueue
+     *
      * @internal Plays actions from the given queue until a waiting signal is
      *           encountered or the queue is exhausted.
      *
-     * @param CameraSession $session
-     * @param array<int, array{float, \Closure|string}> $remainingQueue
      */
     public function playFromQueue(CameraSession $session, array &$remainingQueue) : void{
         $scheduler = Main::getInstance()->getScheduler();
 
-        while(($item = \array_shift($remainingQueue)) !== null){
+        while(($item = array_shift($remainingQueue)) !== null){
             [$delay, $action] = $item;
 
-            if(\is_string($action) && \str_starts_with($action, 'SIGNAL:')){
-                $signalName = \substr($action, 7);
+            if(is_string($action) && str_starts_with($action, 'SIGNAL:')){
+                $signalName = substr($action, 7);
                 $session->setWaitingSignal($signalName, $remainingQueue, $this);
                 return;
             }

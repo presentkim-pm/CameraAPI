@@ -28,7 +28,7 @@ final class CameraTimelineParser{
      */
     public static function fromJson(string $json) : CameraTimeline{
         $data = json_decode($json, true);
-        if(!\is_array($data)){
+        if(!is_array($data)){
             throw new \InvalidArgumentException("Invalid JSON format for CameraTimeline.");
         }
 
@@ -58,17 +58,17 @@ final class CameraTimelineParser{
     public static function fromArray(array $data) : CameraTimeline{
         $timeline = new CameraTimeline();
 
-        if(isset($data['loop']) && \is_bool($data['loop'])){
+        if(isset($data['loop']) && is_bool($data['loop'])){
             $timeline->setLoop($data['loop']);
         }
 
         $steps = $data['steps'] ?? [];
-        if(!\is_array($steps)){
+        if(!is_array($steps)){
             return $timeline;
         }
 
         foreach($steps as $step){
-            if(!\is_array($step)){
+            if(!is_array($step)){
                 continue;
             }
 
@@ -124,14 +124,14 @@ final class CameraTimelineParser{
     /**
      * Adds a "set" step to the timeline.
      *
-     * @param CameraTimeline            $timeline
+     * @param CameraTimeline       $timeline
      * @param array<string, mixed> $step
      */
     private static function addSetStep(CameraTimeline $timeline, array $step) : void{
         $timeline->add(
-            /**
-             * @param CameraSession $session
-             */
+        /**
+         * @param CameraSession $session
+         */
             function(CameraSession $session) use ($step) : void{
                 $builder = new CameraSetBuilder($session);
 
@@ -139,7 +139,7 @@ final class CameraTimelineParser{
                     $builder->preset((string) $step['preset']);
                 }
 
-                if(isset($step['position']) && \is_array($step['position']) && \count($step['position']) >= 3){
+                if(isset($step['position']) && is_array($step['position']) && count($step['position']) >= 3){
                     $builder->position(
                         new Vector3(
                             (float) $step['position'][0],
@@ -149,7 +149,7 @@ final class CameraTimelineParser{
                     );
                 }
 
-                if(isset($step['facing']) && \is_array($step['facing']) && \count($step['facing']) >= 3){
+                if(isset($step['facing']) && is_array($step['facing']) && count($step['facing']) >= 3){
                     $builder->facing(
                         new Vector3(
                             (float) $step['facing'][0],
@@ -159,14 +159,14 @@ final class CameraTimelineParser{
                     );
                 }
 
-                if(isset($step['rotation']) && \is_array($step['rotation']) && \count($step['rotation']) >= 2){
+                if(isset($step['rotation']) && is_array($step['rotation']) && count($step['rotation']) >= 2){
                     $builder->rotation(
                         (float) $step['rotation'][0],
                         (float) $step['rotation'][1]
                     );
                 }
 
-                if(isset($step['ease']) && \is_array($step['ease'])){
+                if(isset($step['ease']) && is_array($step['ease'])){
                     $builder->ease(
                         (int) ($step['ease']['type'] ?? 0),
                         (float) ($step['ease']['duration'] ?? 0.0)
@@ -181,14 +181,14 @@ final class CameraTimelineParser{
     /**
      * Adds a "fade" step to the timeline.
      *
-     * @param CameraTimeline            $timeline
+     * @param CameraTimeline       $timeline
      * @param array<string, mixed> $step
      */
     private static function addFadeStep(CameraTimeline $timeline, array $step) : void{
         $timeline->add(
-            /**
-             * @param CameraSession $session
-             */
+        /**
+         * @param CameraSession $session
+         */
             function(CameraSession $session) use ($step) : void{
                 $builder = new CameraFadeBuilder($session);
 
@@ -210,21 +210,21 @@ final class CameraTimelineParser{
     /**
      * Adds a "fov" step to the timeline.
      *
-     * @param CameraTimeline            $timeline
+     * @param CameraTimeline       $timeline
      * @param array<string, mixed> $step
      */
     private static function addFovStep(CameraTimeline $timeline, array $step) : void{
         $timeline->add(
-            /**
-             * @param CameraSession $session
-             */
+        /**
+         * @param CameraSession $session
+         */
             function(CameraSession $session) use ($step) : void{
                 $builder = new CameraFovBuilder($session);
 
                 if(isset($step['set'])){
                     $builder->set((float) $step['set']);
                 }
-                if(isset($step['ease']) && \is_array($step['ease'])){
+                if(isset($step['ease']) && is_array($step['ease'])){
                     $builder->ease(
                         (int) ($step['ease']['type'] ?? 0),
                         (float) ($step['ease']['duration'] ?? 0.0)

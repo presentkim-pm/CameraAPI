@@ -125,12 +125,13 @@ The session keeps camera context per player and provides builders and utility me
   - `fov() : CameraFovBuilder`
   - `hud(HudPreset|string $presetOrName) : self` – apply a HUD preset by instance or registry name (see §6).
   - `spline() : CameraSplineBuilder` (**deprecated**, do not use in production)
-  - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : void`
-  - `stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : void`
-  - `clear() : void`
-  - `sendPacket(ClientboundPacket $pk) : void`
-  - `stop() : void`
-  - `addTimelineTask(TaskHandler $task) : void`
+  - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
+  - `stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
+  - `clear() : self`
+  - `sendPacket(ClientboundPacket $pk) : self`
+  - `stop() : self`
+  - `addTimelineTask(TaskHandler $task) : self`
+  - `emitSignal(string $signalName) : self` – resume a timeline waiting for this signal (see §3.1).
 
 #### 2.1 Position / Rotation: `set() : CameraSetBuilder`
 

@@ -136,26 +136,45 @@ final class CameraSession{
      * @param float $intensity Intensity of the shake (0.0 - 1.0 recommended).
      * @param float $duration  Duration in seconds.
      * @param int   $type      The type of shake (positional or rotational).
+     *
+     * @return self
      */
-    public function shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL
-    ) : void{
-        $this->sendPacket(CameraShakePacket::create($intensity, $duration, $type, CameraShakePacket::ACTION_ADD));
+    public function shake(
+        float $intensity = 0.5,
+        float $duration = 1.0,
+        int $type = CameraShakePacket::TYPE_POSITIONAL
+    ) : self{
+        return $this->sendPacket(CameraShakePacket::create(
+            $intensity,
+            $duration,
+            $type,
+            CameraShakePacket::ACTION_ADD
+        ));
     }
 
     /**
      * Stops any active camera shake.
      *
      * @param int $type The type of shake to stop.
+     *
+     * @return self
      */
-    public function stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : void{
-        $this->sendPacket(CameraShakePacket::create(0.0, 0.0, $type, CameraShakePacket::ACTION_STOP));
+    public function stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : self{
+        return $this->sendPacket(CameraShakePacket::create(
+            0.0,
+            0.0,
+            $type,
+            CameraShakePacket::ACTION_STOP
+        ));
     }
 
     /**
      * Clears all camera instructions and resets to the default view.
+     *
+     * @return self
      */
-    public function clear() : void{
-        $pk = CameraInstructionPacket::create(
+    public function clear() : self{
+        return $this->sendPacket(CameraInstructionPacket::create(
             set: null,
             clear: true,
             fade: null,
@@ -165,20 +184,22 @@ final class CameraSession{
             spline: null,
             attachToEntity: null,
             detachFromEntity: null
-        );
-        $this->sendPacket($pk);
+        ));
     }
 
     /**
      * Sends a packet to the player if they are online.
      *
      * @param ClientboundPacket $pk The packet to send (e.g. CameraInstructionPacket, CameraShakePacket).
+     *
+     * @return self
      */
-    public function sendPacket(ClientboundPacket $pk) : void{
+    public function sendPacket(ClientboundPacket $pk) : self{
         $player = $this->getPlayer();
         if($player !== null && $player->isConnected()){
             $player->getNetworkSession()->sendDataPacket($pk);
         }
+        return $this;
     }
 
     /**
@@ -203,9 +224,12 @@ final class CameraSession{
      * Registers a timeline task to be managed by this session (cancelled when {@see self::stop()} is called).
      *
      * @param TaskHandler $task The scheduled task handle returned by the scheduler.
+     *
+     * @return self
      */
-    public function addTimelineTask(TaskHandler $task) : void{
+    public function addTimelineTask(TaskHandler $task) : self{
         $this->activeTasks[] = $task;
+        return $this;
     }
 
     /**
@@ -225,10 +249,14 @@ final class CameraSession{
     /**
      * Emits a signal to this session. If the session is currently waiting for
      * the given signal, the paused timeline will resume from where it stopped.
+     *
+     * @param string $signalName
+     *
+     * @return self
      */
-    public function emitSignal(string $signalName) : void{
+    public function emitSignal(string $signalName) : self{
         if($this->waitingSignal !== $signalName || $this->pausedTimeline === null){
-            return;
+            return $this;
         }
 
         $this->waitingSignal = null;
@@ -240,5 +268,6 @@ final class CameraSession{
         $this->pausedTimeline = null;
 
         $timeline->playFromQueue($this, $queueToResume);
+        return $this;
     }
 }

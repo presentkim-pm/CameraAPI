@@ -9,6 +9,8 @@ use kim\present\cameraapi\builder\CameraFovBuilder;
 use kim\present\cameraapi\builder\CameraSetBuilder;
 use kim\present\cameraapi\builder\CameraSplineBuilder;
 use kim\present\cameraapi\builder\CameraTargetBuilder;
+use kim\present\cameraapi\hud\HudPreset;
+use kim\present\cameraapi\hud\HudPresetRegistry;
 use kim\present\cameraapi\timeline\CameraTimeline;
 use pocketmine\network\mcpe\protocol\CameraInstructionPacket;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
@@ -86,6 +88,34 @@ final class CameraSession{
      */
     public function fov() : CameraFovBuilder{
         return new CameraFovBuilder($this);
+    }
+
+    /**
+     * Applies a HUD preset to this session's player.
+     *
+     * Accepts either a {@see HudPreset} instance or a string name of a preset
+     * registered in {@see HudPresetRegistry}. If a name is given and no preset
+     * is found, throws {@see \InvalidArgumentException}.
+     *
+     * @param HudPreset|string $preset       A preset instance or a registry key (e.g.
+     *                                       {@see HudPresetRegistry::PRESET_CLEAR}).
+     *
+     * @return self
+     *
+     * @throws \InvalidArgumentException When a string name is passed and no preset is registered under that name.
+     */
+    public function hud(HudPreset|string $preset) : self{
+        if($preset instanceof HudPreset){
+            $preset->send($this);
+            return $this;
+        }
+
+        if(!HudPresetRegistry::isRegistered($preset)){
+            throw new \InvalidArgumentException("Unknown HUD preset: " . $preset);
+        }
+
+        HudPresetRegistry::get($preset)->send($this);
+        return $this;
     }
 
     /**
@@ -179,11 +209,12 @@ final class CameraSession{
     }
 
     /**
+     * @param string                                    $signalName
+     * @param array<int, array{float, \Closure|string}> $remainingQueue
+     * @param CameraTimeline                            $timeline
+     *
      * @internal Called by {@see CameraTimeline} when a signal wait is encountered.
      *
-     * @param string $signalName
-     * @param array<int, array{float, \Closure|string}> $remainingQueue
-     * @param CameraTimeline $timeline
      */
     public function setWaitingSignal(string $signalName, array $remainingQueue, CameraTimeline $timeline) : void{
         $this->waitingSignal = $signalName;

@@ -123,6 +123,7 @@ The session keeps camera context per player and provides builders and utility me
   - `fade() : CameraFadeBuilder`
   - `target() : CameraTargetBuilder`
   - `fov() : CameraFovBuilder`
+  - `hud(HudPreset|string $presetOrName) : self` – apply a HUD preset by instance or registry name (see §6).
   - `spline() : CameraSplineBuilder` (**deprecated**, do not use in production)
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : void`
   - `stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : void`
@@ -562,7 +563,7 @@ $marker->applyToSession($session, EaseType::IN_CUBIC, 2.0);
 ### 6. HUD presets (utility)
 
 CameraAPI provides **HUD presets**: immutable layouts that describe which `HudElement` entries should be visible.  
-They can be applied directly to a `Player` or `CameraSession` via `send()`, and optional presets can be stored in `HudPresetRegistry`.
+They can be applied directly to a `Player` or `CameraSession` via `send()`, or via **`CameraSession::hud()`** (see below). Optional presets can be stored in `HudPresetRegistry`.
 
 - **Classes**
   - `kim\present\cameraapi\hud\HudPreset` – immutable preset value object
@@ -642,6 +643,23 @@ $minimal->send($player);
   - `get(string $name) : ?HudPreset` – get a preset by name.
   - `isRegistered(string $name) : bool` – whether a preset with that name exists.
   - `getAll() : array<string, HudPreset>` – all registered presets (built-in + custom), keyed by lowercased name.
+
+**Applying HUD from a session**
+
+You can apply a preset from a `CameraSession` with **`hud(HudPreset|string)`**: pass either a `HudPreset` instance or a name registered in `HudPresetRegistry`. Returns the session for chaining.
+
+```php
+use kim\present\cameraapi\Camera;
+use kim\present\cameraapi\hud\HudPresetRegistry;
+
+$session = Camera::of($player);
+
+// By registry name (e.g. hide all HUD for a cutscene)
+$session->hud(HudPresetRegistry::PRESET_CLEAR);
+
+// By preset instance
+$session->hud(new HudPreset(crosshair: true, hotbar: true));
+```
 
 **Example – registry and custom preset**
 

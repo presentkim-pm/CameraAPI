@@ -25,7 +25,7 @@
 
 declare(strict_types=1);
 
-namespace kim\present\cameraapi\entity;
+namespace kim\present\cameraapi\marker;
 
 use pocketmine\entity\Entity;
 use pocketmine\entity\EntitySizeInfo;

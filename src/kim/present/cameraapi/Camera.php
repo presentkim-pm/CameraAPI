@@ -27,8 +27,8 @@ declare(strict_types=1);
 
 namespace kim\present\cameraapi;
 
-use kim\present\cameraapi\entity\CameraMarkerEntity;
 use kim\present\cameraapi\marker\CameraMarker;
+use kim\present\cameraapi\marker\CameraMarkerEntity;
 use kim\present\cameraapi\session\CameraSession;
 use kim\present\cameraapi\session\CameraSessionManager;
 use kim\present\cameraapi\timeline\CameraTimeline;

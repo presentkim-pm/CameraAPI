@@ -38,6 +38,7 @@ use kim\present\cameraapi\hud\HudPresetRegistry;
 use kim\present\cameraapi\timeline\CameraTimeline;
 use pocketmine\network\mcpe\protocol\CameraInstructionPacket;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
+use pocketmine\network\mcpe\protocol\ClientboundControlSchemeSetPacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\player\Player;
 use pocketmine\scheduler\TaskHandler;
@@ -122,6 +123,19 @@ final class CameraSession{
      */
     public function fog() : CameraFogBuilder{
         return new CameraFogBuilder($this);
+    }
+
+    /**
+     * Sends a control scheme packet to the player (e.g. from {@see ControlSchemePackets}).
+     * Some schemes require a specific camera preset (e.g. follow_orbit, fixed_boom) to take effect.
+     *
+     * @param ClientboundControlSchemeSetPacket $packet Packet from ControlSchemePackets (e.g.
+     *                                                  ControlSchemePackets::LOCKED_PLAYER_RELATIVE_STRAFE())
+     *
+     * @return self
+     */
+    public function controlScheme(ClientboundControlSchemeSetPacket $packet) : self{
+        return $this->sendPacket($packet);
     }
 
     /**

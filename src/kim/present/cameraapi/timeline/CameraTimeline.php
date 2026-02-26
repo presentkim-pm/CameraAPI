@@ -37,6 +37,7 @@ use kim\present\cameraapi\Camera;
 use kim\present\cameraapi\Main;
 use kim\present\cameraapi\session\CameraSession;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
+use pocketmine\network\mcpe\protocol\ClientboundControlSchemeSetPacket;
 use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
 
@@ -253,6 +254,21 @@ final class CameraTimeline{
     public function stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : self{
         return $this->add(function(CameraSession $session) use ($type){
             $session->stopShake($type);
+        });
+    }
+
+    /**
+     * Adds a control scheme instruction to the timeline (sends the packet at this point).
+     * Use packets from {@see ControlSchemePackets}.
+     *
+     * @param ClientboundControlSchemeSetPacket $packet Packet from ControlSchemePackets (e.g.
+     *                                                  ControlSchemePackets::CAMERA_RELATIVE())
+     *
+     * @return self
+     */
+    public function controlScheme(ClientboundControlSchemeSetPacket $packet) : self{
+        return $this->add(function(CameraSession $session) use ($packet) : void{
+            $session->controlScheme($packet);
         });
     }
 

@@ -124,6 +124,7 @@ The session keeps camera context per player and provides builders and utility me
   - `target() : CameraTargetBuilder`
   - `fov() : CameraFovBuilder`
   - `fog() : CameraFogBuilder` – manage client-side fog (atmosphere) layers (see §2.5).
+  - `controlScheme(ClientboundControlSchemeSetPacket $packet) : self` – send a control scheme packet (see §2.7).
   - `hud(HudPreset|string $presetOrName) : self` – apply a HUD preset by instance or registry name (see §6).
   - `spline() : CameraSplineBuilder` (**deprecated**, do not use in production)
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
@@ -280,6 +281,31 @@ $session->stopShake();
 $session->clear();
 ```
 
+#### 2.7 Control scheme: `controlScheme(ClientboundControlSchemeSetPacket $packet)`
+
+Sends a control scheme packet to the player to change how movement/input is interpreted (e.g. camera-relative vs player-relative). Use the predefined packets from `ControlSchemePackets`. Some schemes require a specific camera preset (e.g. `follow_orbit` or `fixed_boom`) to take effect.
+
+```php
+use kim\present\cameraapi\Camera;
+use kim\present\cameraapi\utils\ControlSchemePackets;
+
+$session = Camera::of($player);
+
+// Lock player-relative strafe (commonly used with free camera)
+$session->controlScheme(ControlSchemePackets::LOCKED_PLAYER_RELATIVE_STRAFE());
+
+// Camera-relative controls (requires follow_orbit or fixed_boom preset)
+$session->set()->preset("minecraft:follow_orbit")->send();
+$session->controlScheme(ControlSchemePackets::CAMERA_RELATIVE());
+```
+
+- **Available schemes** (from `ControlSchemePackets`)
+  - `LOCKED_PLAYER_RELATIVE_STRAFE` – default / free camera style.
+  - `CAMERA_RELATIVE` – movement relative to camera (requires `follow_orbit` or `fixed_boom`).
+  - `CAMERA_RELATIVE_STRAFE` – same as above with strafe (requires `follow_orbit` or `fixed_boom`).
+  - `PLAYER_RELATIVE` – player-relative (requires `fixed_boom`).
+  - `PLAYER_RELATIVE_STRAFE` – player-relative with strafe (requires `fixed_boom`).
+
 ---
 
 ### 3. `CameraTimeline` (Cutscenes / Sequences)
@@ -311,6 +337,7 @@ $timeline->play($player);
   - `target(\Closure(CameraTargetBuilder): void $setup) : self`
   - `fov(\Closure(CameraFovBuilder): void $setup) : self`
   - `fog(\Closure(CameraFogBuilder): void $setup) : self` – add a fog instruction (push/remove layers) at this point in the timeline.
+  - `controlScheme(ClientboundControlSchemeSetPacket $packet) : self` – send a control scheme packet at this point (use `ControlSchemePackets::…()`).
   - `spline(\Closure(CameraSplineBuilder): void $setup) : self`
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
   - `stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : self`

@@ -109,6 +109,54 @@ final class CameraSetBuilder{
     }
 
     /**
+     * Sets the camera position using a world-space offset from the player's current position.
+     *
+     * @param Vector3 $offset Offset in world coordinates (X/Z: east/west, Y: up/down).
+     *
+     * @return self
+     */
+    public function positionOffset(Vector3 $offset) : self{
+        $player = $this->session->getPlayer();
+        if($player === null || !$player->isConnected()){
+            return $this;
+        }
+
+        $basePos = $player->getPosition();
+        $this->cameraPosition = new Vector3(
+            $basePos->x + $offset->x,
+            $basePos->y + $offset->y,
+            $basePos->z + $offset->z
+        );
+
+        return $this;
+    }
+
+    /**
+     * Sets the camera position using a local-space offset relative to the player's view.
+     *
+     * Local axes:
+     * - X: right (+) / left (-)
+     * - Y: up (+) / down (-)
+     * - Z: forward (+) / backward (-)
+     *
+     * @param Vector3 $offset Local-space offset.
+     *
+     * @return self
+     */
+    public function positionLocal(Vector3 $offset) : self{
+        $player = $this->session->getPlayer();
+        if($player === null || !$player->isConnected()){
+            return $this;
+        }
+
+        $location = $player->getLocation();
+        $basePos = new Vector3($location->getX(), $location->getY(), $location->getZ());
+        $this->cameraPosition = $this->calculateLocalPosition($basePos, $location->getYaw(), $offset);
+
+        return $this;
+    }
+
+    /**
      * Calculates and sets the camera rotation so it looks at a target point.
      *
      * This uses the previously configured camera position (via {@see position()})
@@ -171,6 +219,51 @@ final class CameraSetBuilder{
     }
 
     /**
+     * Sets the facing target using a world-space offset from the player's current position.
+     *
+     * @param Vector3 $offset Offset in world coordinates (X/Z: east/west, Y: up/down).
+     *
+     * @return self
+     */
+    public function facingOffset(Vector3 $offset) : self{
+        $player = $this->session->getPlayer();
+        if($player === null || !$player->isConnected()){
+            return $this;
+        }
+
+        $basePos = $player->getPosition();
+        $this->facingPosition = new Vector3(
+            $basePos->x + $offset->x,
+            $basePos->y + $offset->y,
+            $basePos->z + $offset->z
+        );
+
+        return $this;
+    }
+
+    /**
+     * Sets the facing target using a local-space offset relative to the player's view.
+     *
+     * Uses the same local axes and rotation rules as {@see positionLocal()}.
+     *
+     * @param Vector3 $offset Local-space offset.
+     *
+     * @return self
+     */
+    public function facingLocal(Vector3 $offset) : self{
+        $player = $this->session->getPlayer();
+        if($player === null || !$player->isConnected()){
+            return $this;
+        }
+
+        $location = $player->getLocation();
+        $basePos = new Vector3($location->getX(), $location->getY(), $location->getZ());
+        $this->facingPosition = $this->calculateLocalPosition($basePos, $location->getYaw(), $offset);
+
+        return $this;
+    }
+
+    /**
      * Sets the view offset relative to the screen center.
      *
      * @param Vector2 $offset
@@ -204,6 +297,49 @@ final class CameraSetBuilder{
     public function setDefault(bool $value = true) : self{
         $this->default = $value;
         return $this;
+    }
+
+    /**
+     * Converts a local-space offset (relative to the player's yaw) into a world-space position.
+     *
+     * PMMP / Minecraft yaw convention:
+     * - 0°   = South (+Z)
+     * - 90°  = West (-X)
+     * - 180° = North (-Z)
+     * - 270° = East (+X)
+     *
+     * Forward vector:
+     *  X = -sin(deg2rad(yaw))
+     *  Z =  cos(deg2rad(yaw))
+     *
+     * Right vector:
+     *  X = -cos(deg2rad(yaw))
+     *  Z = -sin(deg2rad(yaw))
+     *
+     * @param Vector3 $basePos Player world position.
+     * @param float   $yaw     Player yaw in degrees.
+     * @param Vector3 $offset  Local-space offset.
+     *
+     * @return Vector3 World-space position.
+     */
+    private function calculateLocalPosition(Vector3 $basePos, float $yaw, Vector3 $offset) : Vector3{
+        $rad = deg2rad($yaw);
+
+        $forwardX = -sin($rad);
+        $forwardZ = cos($rad);
+
+        $rightX = -cos($rad);
+        $rightZ = -sin($rad);
+
+        $dx = $rightX * $offset->x + $forwardX * $offset->z;
+        $dy = $offset->y;
+        $dz = $rightZ * $offset->x + $forwardZ * $offset->z;
+
+        return new Vector3(
+            $basePos->x + $dx,
+            $basePos->y + $dy,
+            $basePos->z + $dz
+        );
     }
 
     /**

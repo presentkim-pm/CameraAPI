@@ -162,13 +162,25 @@ $session->set()
   - `ease(int $type, float $duration) : self`
     - Use `CameraSetInstructionEaseType` constants (e.g. `EaseType::LINEAR`).
   - `position(Vector3 $position) : self`
+  - `positionOffset(Vector3 $offset) : self` – world-space offset from the player's current position.
+  - `positionLocal(Vector3 $offset) : self` – local-space offset relative to the player's view (X: right/left, Y: up/down, Z: forward/backward).
   - `rotation(float $pitch, float $yaw) : self`
   - `rotationTo(Vector3 $target) : self` – compute and set rotation so the camera at the current position looks at the given world-space target.
   - `facing(Vector3 $position) : self`
+  - `facingOffset(Vector3 $offset) : self` – world-space offset for the target the camera should look at.
+  - `facingLocal(Vector3 $offset) : self` – local-space offset for the facing target, using the same convention as `positionLocal()`.
   - `viewOffset(Vector2 $offset) : self`
   - `entityOffset(Vector3 $offset) : self`
   - `setDefault(bool $value = true) : self`
   - `send() : CameraSession`
+
+**World vs local offsets**
+
+- World-space helpers (`positionOffset`, `facingOffset`) simply add the given offset to the player's current world position.
+- Local-space helpers (`positionLocal`, `facingLocal`) interpret the offset in the player's view space:
+  - X: right (+) / left (-)
+  - Y: up (+) / down (-)
+  - Z: forward (+) / backward (-)
 
 #### 2.2 Screen Fade: `fade() : CameraFadeBuilder`
 

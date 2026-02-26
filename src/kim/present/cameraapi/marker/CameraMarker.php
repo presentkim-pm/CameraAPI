@@ -27,8 +27,8 @@ declare(strict_types=1);
 
 namespace kim\present\cameraapi\marker;
 
+use kim\present\cameraapi\camera\preset\CameraPresetRegistry;
 use kim\present\cameraapi\entity\CameraMarkerEntity;
-use kim\present\cameraapi\preset\CameraPresetRegistry;
 use kim\present\cameraapi\session\CameraSession;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstructionEaseType;

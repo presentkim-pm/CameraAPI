@@ -25,9 +25,9 @@
 
 declare(strict_types=1);
 
-namespace kim\present\cameraapi\builder;
+namespace kim\present\cameraapi\camera\builder;
 
-use kim\present\cameraapi\preset\CameraPresetRegistry;
+use kim\present\cameraapi\camera\preset\CameraPresetRegistry;
 use kim\present\cameraapi\session\CameraSession;
 use pocketmine\math\Vector2;
 use pocketmine\math\Vector3;

@@ -525,8 +525,8 @@ This plugin registers **vanilla presets** and provides an API for registering yo
 #### 4.1 Registering a preset
 
 ```php
-use kim\present\cameraapi\preset\CameraPresetBuilder;
-use kim\present\cameraapi\preset\CameraPresetRegistry;
+use kim\present\cameraapi\camera\preset\CameraPresetBuilder;
+use kim\present\cameraapi\camera\preset\CameraPresetRegistry;
 use pocketmine\math\Vector3;
 
 CameraPresetRegistry::register(
@@ -543,7 +543,7 @@ CameraPresetRegistry::register(
 #### 4.2 Looking up / using presets
 
 ```php
-use kim\present\cameraapi\preset\CameraPresetRegistry;
+use kim\present\cameraapi\camera\preset\CameraPresetRegistry;
 
 $id = CameraPresetRegistry::getIdByName("myplugin:topdown"); // int|null
 ```
@@ -834,8 +834,8 @@ function playBossCutscene(Player $player, Vector3 $bossPos) : void{
 ### Example 3. Top‑down minigame using presets
 
 ```php
-use kim\present\cameraapi\preset\CameraPresetBuilder;
-use kim\present\cameraapi\preset\CameraPresetRegistry;
+use kim\present\cameraapi\camera\preset\CameraPresetBuilder;
+use kim\present\cameraapi\camera\preset\CameraPresetRegistry;
 use kim\present\cameraapi\Camera;
 use pocketmine\math\Vector3;
 

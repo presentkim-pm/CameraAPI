@@ -27,12 +27,12 @@ declare(strict_types=1);
 
 namespace kim\present\cameraapi\session;
 
-use kim\present\cameraapi\builder\CameraFadeBuilder;
-use kim\present\cameraapi\builder\CameraFogBuilder;
-use kim\present\cameraapi\builder\CameraFovBuilder;
-use kim\present\cameraapi\builder\CameraSetBuilder;
-use kim\present\cameraapi\builder\CameraSplineBuilder;
-use kim\present\cameraapi\builder\CameraTargetBuilder;
+use kim\present\cameraapi\camera\builder\CameraFadeBuilder;
+use kim\present\cameraapi\camera\builder\CameraFogBuilder;
+use kim\present\cameraapi\camera\builder\CameraFovBuilder;
+use kim\present\cameraapi\camera\builder\CameraSetBuilder;
+use kim\present\cameraapi\camera\builder\CameraSplineBuilder;
+use kim\present\cameraapi\camera\builder\CameraTargetBuilder;
 use kim\present\cameraapi\hud\HudPreset;
 use kim\present\cameraapi\hud\HudPresetRegistry;
 use kim\present\cameraapi\timeline\CameraTimeline;

@@ -25,7 +25,7 @@
 
 declare(strict_types=1);
 
-namespace kim\present\cameraapi\builder;
+namespace kim\present\cameraapi\camera\builder;
 
 use kim\present\cameraapi\session\CameraSession;
 use kim\present\cameraapi\utils\ColorUtils;

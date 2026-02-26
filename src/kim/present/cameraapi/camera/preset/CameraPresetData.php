@@ -25,7 +25,7 @@
 
 declare(strict_types=1);
 
-namespace kim\present\cameraapi\preset;
+namespace kim\present\cameraapi\camera\preset;
 
 use pocketmine\network\mcpe\protocol\types\camera\CameraPreset;
 

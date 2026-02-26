@@ -27,8 +27,8 @@ declare(strict_types=1);
 
 namespace kim\present\cameraapi;
 
+use kim\present\cameraapi\camera\preset\CameraPresetRegistry;
 use kim\present\cameraapi\entity\CameraMarkerEntity;
-use kim\present\cameraapi\preset\CameraPresetRegistry;
 use kim\present\cameraapi\session\CameraSessionManager;
 use pocketmine\entity\Skin;
 use pocketmine\event\Listener;

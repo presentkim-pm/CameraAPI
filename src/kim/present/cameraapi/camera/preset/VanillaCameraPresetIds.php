@@ -25,7 +25,7 @@
 
 declare(strict_types=1);
 
-namespace kim\present\cameraapi\preset;
+namespace kim\present\cameraapi\camera\preset;
 
 /**
  * Lists the fixed sequential IDs for vanilla camera presets.

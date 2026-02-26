@@ -27,9 +27,9 @@ declare(strict_types=1);
 
 namespace kim\present\cameraapi\timeline;
 
-use kim\present\cameraapi\builder\CameraFadeBuilder;
-use kim\present\cameraapi\builder\CameraFovBuilder;
-use kim\present\cameraapi\builder\CameraSetBuilder;
+use kim\present\cameraapi\camera\builder\CameraFadeBuilder;
+use kim\present\cameraapi\camera\builder\CameraFovBuilder;
+use kim\present\cameraapi\camera\builder\CameraSetBuilder;
 use kim\present\cameraapi\session\CameraSession;
 use pocketmine\math\Vector3;
 

@@ -359,15 +359,15 @@ $timeline->play($player);
 - **Method overview**
   - `wait(float $seconds) : self`
   - `waitUntil(string $signalName) : self` – pause the timeline until the given signal is emitted for that player's `CameraSession` (see below).
-  - `set(\Closure(CameraSetBuilder): void $setup) : self`
-  - `fade(\Closure(CameraFadeBuilder): void $setup) : self`
-  - `target(\Closure(CameraTargetBuilder): void $setup) : self`
-  - `fov(\Closure(CameraFovBuilder): void $setup) : self`
-  - `fog(\Closure(CameraFogBuilder): void $setup) : self` – add a fog instruction (push/remove layers) at this point in the timeline.
+  - `set(\Closure(CameraSetBuilder): mixed $setup) : self`
+  - `fade(\Closure(CameraFadeBuilder): mixed $setup) : self`
+  - `target(\Closure(CameraTargetBuilder): mixed $setup) : self`
+  - `fov(\Closure(CameraFovBuilder): mixed $setup) : self`
+  - `fog(\Closure(CameraFogBuilder): mixed $setup) : self` – add a fog instruction (push/remove layers) at this point in the timeline.
   - `controlScheme(ClientboundControlSchemeSetPacket $packet) : self` – send a control scheme packet at this point (use `ControlSchemePackets::…()`).
   - `attachToEntity(Entity|int $entityOrRuntimeId) : self` – attach camera to the entity or runtime ID at this point in the timeline.
   - `detachFromEntity() : self` – detach camera from the entity at this point.
-  - `spline(\Closure(CameraSplineBuilder): void $setup) : self`
+  - `spline(\Closure(CameraSplineBuilder): mixed $setup) : self`
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
   - `stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
   - `clear() : self`

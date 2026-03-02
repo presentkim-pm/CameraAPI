@@ -116,7 +116,7 @@ final class CameraTimeline{
     /**
      * Adds a custom action to the timeline at the current time offset.
      *
-     * @param \Closure(CameraSession): void $action Callback receiving the player's camera session
+     * @param \Closure(CameraSession): mixed $action Callback receiving the player's camera session
      *
      * @return self For chaining.
      */
@@ -142,7 +142,7 @@ final class CameraTimeline{
     /**
      * Adds a 'Camera Set' instruction to the timeline.
      *
-     * @param \Closure(CameraSetBuilder): void $setup Callback to configure the builder.
+     * @param \Closure(CameraSetBuilder): mixed $setup Callback to configure the builder.
      *
      * @return self
      */
@@ -157,7 +157,7 @@ final class CameraTimeline{
     /**
      * Adds a 'Camera Fade' instruction to the timeline.
      *
-     * @param \Closure(CameraFadeBuilder): void $setup Callback to configure the builder.
+     * @param \Closure(CameraFadeBuilder): mixed $setup Callback to configure the builder.
      *
      * @return self
      */
@@ -172,7 +172,7 @@ final class CameraTimeline{
     /**
      * Adds a 'Camera Target' instruction to the timeline.
      *
-     * @param \Closure(CameraTargetBuilder): void $setup Callback to configure the builder.
+     * @param \Closure(CameraTargetBuilder): mixed $setup Callback to configure the builder.
      *
      * @return self
      */
@@ -187,7 +187,7 @@ final class CameraTimeline{
     /**
      * Adds a 'Camera FOV' instruction to the timeline.
      *
-     * @param \Closure(CameraFovBuilder): void $setup Callback to configure the builder.
+     * @param \Closure(CameraFovBuilder): mixed $setup Callback to configure the builder.
      *
      * @return self
      */
@@ -202,7 +202,7 @@ final class CameraTimeline{
     /**
      * Adds a 'Fog' instruction to the timeline.
      *
-     * @param \Closure(CameraFogBuilder): void $setup Callback to configure the builder.
+     * @param \Closure(CameraFogBuilder): mixed $setup Callback to configure the builder.
      *
      * @return self
      */
@@ -217,7 +217,7 @@ final class CameraTimeline{
     /**
      * Adds a 'Camera Spline' instruction to the timeline.
      *
-     * @param \Closure(CameraSplineBuilder): void $setup Callback to configure the builder.
+     * @param \Closure(CameraSplineBuilder): mixed $setup Callback to configure the builder.
      *
      * @return self
      */

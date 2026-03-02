@@ -243,33 +243,33 @@ $session->fov()
 
 #### 2.5 Fog (atmosphere): `fog() : CameraFogBuilder`
 
-Controls client-side fog layers (e.g. vanilla biome fogs like Nether or Crimson Forest). Fog is managed as a stack: you push fog IDs and remove them by the same ID; `send()` transmits the current stack as a single packet.
+Controls client-side fog layers (e.g. vanilla biome fogs like Nether or Crimson Forest). Fog is managed as a stack similar to the vanilla `/fog` command: each layer has a `fogId` and a `userProvidedId`. You can push the same fog ID multiple times with different `userProvidedId`s; `remove($userProvidedId)` removes all layers that were pushed with that id; `send()` transmits the current stack as a single packet.
 
 Vanilla fog IDs are available as constants in **`kim\present\cameraapi\utils\VanillaFogIds`** (e.g. `VanillaFogIds::FOG_HELL`, `VanillaFogIds::FOG_CRIMSON_FOREST`, `VanillaFogIds::FOG_THE_END`). See that class for the full list.
 
 ```php
 use kim\present\cameraapi\utils\VanillaFogIds;
 
-// Add fog (e.g. Nether-style atmosphere)
+// Add fog (e.g. Nether-style atmosphere) with a userProvidedId
 $session->fog()
-    ->push(VanillaFogIds::FOG_HELL)
+    ->push(VanillaFogIds::FOG_HELL, "nether_phase")
     ->send();
 
 // Remove a fog layer
 $session->fog()
-    ->remove(VanillaFogIds::FOG_HELL)
+    ->remove("nether_phase")
     ->send();
 
 // Multiple layers (stack order preserved)
 $session->fog()
-    ->push(VanillaFogIds::FOG_CRIMSON_FOREST)
-    ->push(VanillaFogIds::FOG_HELL)
+    ->push(VanillaFogIds::FOG_CRIMSON_FOREST, "layer1")
+    ->push(VanillaFogIds::FOG_HELL, "layer2")
     ->send();
 ```
 
 - **Methods**
-  - `push(string $fogId) : self` – add a fog layer (use `VanillaFogIds` for vanilla IDs).
-  - `remove(string $fogId) : self` – remove all layers with the given fog ID from the stack.
+  - `push(string $fogId, string $userProvidedId) : self` – push a fog layer; the same fog ID can be pushed multiple times with different user IDs.
+  - `remove(string $userProvidedId) : self` – remove all layers that were pushed with the given `userProvidedId`.
   - `send() : CameraSession` – send the current fog stack to the client.
 
 #### 2.6 Shake / Reset
@@ -483,12 +483,17 @@ This is useful if non-programmers (builders / designers) need to tweak cutscenes
   }
   ```
 
-- `fog` – push and/or remove fog layers (use vanilla IDs e.g. `minecraft:fog_hell`):
+- `fog` – push and/or remove fog layers. `push`: array of `{ "fogId": "...", "userProvidedId": "..." }`. `remove`: array of `userProvidedId` strings. Order: remove then push.
 
   ```json
-  { "type": "fog", "push": ["minecraft:fog_hell"], "remove": [] }
+  {
+    "type": "fog",
+    "push": [
+      { "fogId": "minecraft:fog_hell", "userProvidedId": "phase1" }
+    ],
+    "remove": ["phase0"]
+  }
   ```
-  Omit `push` or `remove`, or use empty arrays. Order: remove then push.
 
 - `controlScheme` – send a control scheme packet. `scheme` must be one of: `LOCKED_PLAYER_RELATIVE_STRAFE`, `CAMERA_RELATIVE`, `CAMERA_RELATIVE_STRAFE`, `PLAYER_RELATIVE`, `PLAYER_RELATIVE_STRAFE`:
 

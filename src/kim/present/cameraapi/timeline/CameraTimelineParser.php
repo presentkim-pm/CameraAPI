@@ -286,21 +286,38 @@ final class CameraTimelineParser{
     /**
      * Adds a "fog" step to the timeline.
      *
+     * Schema:
+     *  - push: array of { fogId: string, userProvidedId: string }
+     *  - remove: array of userProvidedId strings
+     *
      * @param CameraTimeline       $timeline
      * @param array<string, mixed> $step
      */
     private static function addFogStep(CameraTimeline $timeline, array $step) : void{
-        $push = isset($step['push']) && is_array($step['push']) ? array_map('strval', $step['push']) : [];
+        $push = isset($step['push']) && is_array($step['push']) ? $step['push'] : [];
         $remove = isset($step['remove']) && is_array($step['remove']) ? array_map('strval', $step['remove']) : [];
         $timeline->add(
             function(CameraSession $session) use ($push, $remove) : void{
                 $builder = new CameraFogBuilder($session);
-                foreach($remove as $fogId){
-                    $builder->remove($fogId);
+
+                foreach($remove as $userProvidedId){
+                    $builder->remove($userProvidedId);
                 }
-                foreach($push as $fogId){
-                    $builder->push($fogId);
+
+                foreach($push as $item){
+                    if(!is_array($item)){
+                        continue;
+                    }
+
+                    $fogId = isset($item['fogId']) ? (string) $item['fogId'] : null;
+                    $userProvidedId = isset($item['userProvidedId']) ? (string) $item['userProvidedId'] : null;
+                    if($fogId === null || $userProvidedId === null){
+                        continue;
+                    }
+
+                    $builder->push($fogId, $userProvidedId);
                 }
+
                 $builder->send();
             }
         );

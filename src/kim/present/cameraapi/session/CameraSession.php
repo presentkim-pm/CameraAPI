@@ -143,6 +143,9 @@ final class CameraSession{
      * Attaches the camera to the given entity or runtime ID (e.g. POV spectator – see through the entity's eyes).
      * The client will use the entity's position and rotation for the camera until detached.
      *
+     * Note: For the attachment to have visible effect, the active camera preset must support entity attachment,
+     * such as "minecraft:follow_orbit" or "minecraft:fixed_boom".
+     *
      * @param Entity|int $entityOrRuntimeId The entity to attach to (uses its runtime ID), or the entity runtime ID
      *                                      directly.
      *

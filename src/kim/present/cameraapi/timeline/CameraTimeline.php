@@ -278,6 +278,9 @@ final class CameraTimeline{
      * POV spectator). When an entity is passed, it should still exist when this step runs; when an int is passed, it
      * is used as the runtime ID as-is.
      *
+     * Note: For the attachment to have visible effect, the active camera preset must support entity attachment,
+     * such as "minecraft:follow_orbit" or "minecraft:fixed_boom".
+     *
      * @param Entity|int $entityOrRuntimeId The entity to attach to, or the entity runtime ID directly.
      *
      * @return self

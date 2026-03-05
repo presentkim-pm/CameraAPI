@@ -312,7 +312,10 @@ $session->controlScheme(ControlSchemePackets::CAMERA_RELATIVE());
 
 #### 2.8 Attach / Detach entity: `attachToEntity(Entity|int)` and `detachFromEntity()`
 
-Attaches the player's camera to an entity so they see through that entity's eyes (POV spectator). Accepts either an `Entity` (uses its runtime ID via `getId()`) or an `int` runtime ID directly. The entity must exist and be visible to the client when the packet is sent.
+Attaches the player's camera to an entity so they see through that entity's eyes (POV spectator). Accepts either an
+`Entity` (uses its runtime ID via `getId()`) or an `int` runtime ID directly. The entity must exist and be visible to
+the client when the packet is sent. For the attachment to have a visible effect, the active camera preset must support
+entity attachment, such as `"minecraft:follow_orbit"` or `"minecraft:fixed_boom"`.
 
 ```php
 use kim\present\cameraapi\Camera;

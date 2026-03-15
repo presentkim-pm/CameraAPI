@@ -27,6 +27,7 @@ declare(strict_types=1);
 
 namespace kim\present\cameraapi;
 
+use kim\present\cameraapi\aimassist\AimAssistPresetRegistry;
 use kim\present\cameraapi\camera\preset\CameraPresetRegistry;
 use kim\present\cameraapi\marker\CameraMarkerEntity;
 use kim\present\cameraapi\session\CameraSessionManager;
@@ -58,6 +59,7 @@ final class Main extends PluginBase implements Listener{
 
     protected function onEnable() : void{
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
+        AimAssistPresetRegistry::init();
         CameraSessionManager::init();
     }
 
@@ -69,6 +71,7 @@ final class Main extends PluginBase implements Listener{
     public function onPlayerJoin(PlayerJoinEvent $event) : void{
         $player = $event->getPlayer();
         CameraSessionManager::createSession($player);
+        AimAssistPresetRegistry::sendTo($player);
         CameraPresetRegistry::sendTo($player);
     }
 

@@ -33,6 +33,7 @@ use kim\present\cameraapi\camera\builder\CameraFovBuilder;
 use kim\present\cameraapi\camera\builder\CameraSetBuilder;
 use kim\present\cameraapi\camera\builder\CameraSplineBuilder;
 use kim\present\cameraapi\camera\builder\CameraTargetBuilder;
+use kim\present\cameraapi\aimassist\AimAssistBuilder;
 use kim\present\cameraapi\hud\HudPreset;
 use kim\present\cameraapi\hud\HudPresetRegistry;
 use kim\present\cameraapi\timeline\CameraTimeline;
@@ -211,6 +212,16 @@ final class CameraSession{
 
         HudPresetRegistry::get($preset)->send($this);
         return $this;
+    }
+
+    /**
+     * Creates an aim-assist builder that sends {@see CameraAimAssistPacket} to this session's player.
+     *
+     * The builder controls activation of a specific aim-assist preset (identifier), along with view angle, distance,
+     * target mode and action type.
+     */
+    public function aimAssist() : AimAssistBuilder{
+        return new AimAssistBuilder($this);
     }
 
     /**

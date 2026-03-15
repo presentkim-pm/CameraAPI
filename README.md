@@ -40,6 +40,7 @@
     `CameraFogBuilder`, `CameraSplineBuilder` (experimental / discouraged).
   - `CameraTimeline` – utility to queue and play camera instructions over time (cutscenes).
   - `CameraPresetRegistry` / `CameraPresetBuilder` – registration and synchronization of camera presets with the client.
+  - `AimAssistPresetRegistry` – registration and synchronization of aim‑assist categories and presets with the client.
   - `CameraMarker` – in-world helper entity (fake player) to place and preview camera viewpoints; supports interact and attack callbacks.
 
 ---
@@ -55,6 +56,7 @@
   - The `Main` plugin class is loaded and:
     - On `PlayerJoinEvent`, `CameraSessionManager::createSession($player)` creates a session.
     - `CameraPresetRegistry::sendTo($player)` sends camera presets to the client.
+    - `AimAssistPresetRegistry::sendTo($player)` sends aim‑assist presets and categories to the client.
   - When `StartGamePacket` or `ResourcePackStackPacket` is sent, the plugin automatically enables the
     `experimental_creator_cameras` experiment flag.
 
@@ -128,6 +130,7 @@ The session keeps camera context per player and provides builders and utility me
   - `attachToEntity(Entity|int $entityOrRuntimeId) : self` – attach camera to an entity or runtime ID, e.g. POV spectator (see §2.8).
   - `detachFromEntity() : self` – detach camera from the current entity (see §2.8).
   - `hud(HudPreset|string $presetOrName) : self` – apply a HUD preset by instance or registry name (see §6).
+  - `aimAssist() : AimAssistBuilder` – configure and send a camera aim‑assist packet (see §7.4).
   - `spline() : CameraSplineBuilder` (**deprecated**, do not use in production)
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
   - `stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
@@ -817,12 +820,195 @@ if($preset !== null){
 
 ---
 
+### 7. Aim‑assist presets (beta)
+
+CameraAPI also manages **camera aim‑assist presets** and categories and synchronizes them to the client via  
+`CameraAimAssistPresetsPacket`. This wraps the vanilla `"minecraft:aim_assist_default"` preset and lets you extend it
+with your own categories / presets if you need per‑item aim‑assist behavior.
+
+- **Classes**
+  - `kim\present\cameraapi\aimassist\AimAssistPresetRegistry` – static registry for aim‑assist categories and presets.
+  - `kim\present\cameraapi\aimassist\VanillaAimAssistPresetIds` – constants for vanilla IDs:
+    - `MINECRAFT_DEFAULT = 'minecraft:aim_assist_default'`
+    - `CATEGORY_BUCKET = 'minecraft:bucket'`
+    - `CATEGORY_EMPTY_HAND = 'minecraft:empty_hand'`
+    - `CATEGORY_DEFAULT = 'minecraft:default'`
+  - PMMP DTOs (from `pocketmine\network\mcpe\protocol\types\camera`):
+    - `CameraAimAssistCategory`, `CameraAimAssistCategoryPriorities`, `CameraAimAssistCategoryPriority`
+    - `CameraAimAssistPreset`, `CameraAimAssistPresetExclusionDefinition`, `CameraAimAssistPresetItemSettings`
+
+- **What the plugin does automatically**
+  - On plugin enable, `AimAssistPresetRegistry::init()` is called from `Main::onEnable()`.
+  - `AimAssistPresetRegistry` registers the vanilla preset **`minecraft:aim_assist_default`** and three categories:
+    - `minecraft:bucket` – higher priority for cauldrons and liquids when holding a bucket.
+    - `minecraft:empty_hand` – higher priority for various log blocks when empty‑handed.
+    - `minecraft:default` – higher priority for buttons / levers.
+  - After initialization and on every registry change, `AimAssistPresetRegistry::sendToAll()` broadcasts the full
+    category + preset list to all online players.
+  - On `PlayerJoinEvent`, `Main` calls `AimAssistPresetRegistry::sendTo($player)` so the joining client receives the
+    current list.
+
+#### 7.1 Basic usage (vanilla default)
+
+If you only want vanilla‑style behavior, you usually **do not need to call anything**: the plugin already registers and
+sends the `minecraft:aim_assist_default` preset and categories.
+
+To explicitly re‑send the list or a single preset to a player:
+
+```php
+use kim\present\cameraapi\aimassist\AimAssistPresetRegistry;
+use kim\present\cameraapi\aimassist\VanillaAimAssistPresetIds;
+use pocketmine\player\Player;
+
+function syncAimAssist(Player $player) : void{
+    // Send full category + preset list (already done on join, but safe to call again)
+    AimAssistPresetRegistry::sendTo($player);
+
+    // Or send only the vanilla default preset (categories included)
+    AimAssistPresetRegistry::sendPresetToPlayer(
+        $player,
+        VanillaAimAssistPresetIds::MINECRAFT_DEFAULT
+    );
+}
+```
+
+> Note: Client‑side toggling of aim assist is controlled by `ClientCameraAimAssistPacket`.  
+> CameraAPI currently focuses on **defining and syncing the preset list**, not listening to or sending client‑toggle
+> packets for you.
+
+#### 7.2 Registering a custom aim‑assist preset
+
+The current API is intentionally low‑level: you build PMMP DTOs directly and pass them into the registry.
+
+```php
+use kim\present\cameraapi\aimassist\AimAssistPresetRegistry;
+use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistCategory;
+use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistCategoryPriorities;
+use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistCategoryPriority;
+use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistPreset;
+use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistPresetExclusionDefinition;
+use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistPresetItemSettings;
+
+function registerBowAimAssistPreset() : void{
+    // 1) Category: prefer "target dummy" blocks when holding a bow
+    $priorities = new CameraAimAssistCategoryPriorities(
+        entities: [],
+        blocks: [
+            new CameraAimAssistCategoryPriority('mygame:target_dummy', 60),
+        ],
+        blockTags: [],
+        entityTypeFamilies: [],
+        defaultEntityPriority: null,
+        defaultBlockPriority: 30,
+    );
+
+    $categoryName = 'mygame:bow';
+    AimAssistPresetRegistry::registerCategory(
+        new CameraAimAssistCategory($categoryName, $priorities)
+    );
+
+    // 2) Preset: map bow item to the category
+    $exclusion = new CameraAimAssistPresetExclusionDefinition(
+        blocks: [],
+        entities: [],
+        blockTags: [],
+        entityTypeFamilies: [],
+    );
+
+    $presetId = 'mygame:aim_assist_bow';
+    $preset = new CameraAimAssistPreset(
+        $presetId,
+        $exclusion,
+        liquidTargetingList: [],
+        itemSettings: [
+            new CameraAimAssistPresetItemSettings('minecraft:bow', $categoryName),
+        ],
+        defaultItemSettings: $categoryName,
+        defaultHandSettings: null,
+    );
+
+    AimAssistPresetRegistry::registerPreset($preset);
+}
+```
+
+- When you call `registerCategory()` / `registerPreset()`, the registry automatically calls `sendToAll()` so all clients
+  see the updated aim‑assist configuration.
+
+#### 7.3 Current limitations & planned improvements
+
+Right now, the aim‑assist API is **somewhat low‑level and verbose** because it directly exposes PMMP DTOs.
+To make it easier to use in real plugins, the following improvements are planned:
+
+- **Builder API for aim‑assist** (similar to camera presets / HUD):
+  - `AimAssistCategoryBuilder` – fluent helpers for adding block/entity priorities and defaults.
+  - `AimAssistPresetBuilder` – helpers for exclusions, liquid targeting, and item mappings.
+- **Bulk registration without auto‑broadcast**:
+  - Option to disable the current `sendToAll()` side‑effect in `registerCategory()` / `registerPreset()`, or a
+    `beginBatch()` / `endBatch()` API that only sends once at the end.
+- **Config‑driven definitions**:
+  - Load categories/presets from YAML/JSON files so designers can tweak behavior without PHP changes.
+- **Higher‑level helpers for common cases**:
+  - e.g. `registerSimpleBlockPriorityCategory(string $name, list<string> $blocks, int $priority = 60)` to cut down on
+    boilerplate when you only care about blocks.
+
+Until these improvements land, the recommended way to use aim assist is:
+
+1. Rely on the plugin’s built‑in `minecraft:aim_assist_default` where possible.
+2. For custom behavior, create small helper functions in your own plugin (as in §7.2) that hide the DTO boilerplate.
+
+#### 7.4 Using aim‑assist from `CameraSession`
+
+For most gameplay code, you should not have to touch `CameraAimAssistPresetsPacket` or `CameraAimAssistPacket`
+directly. Instead, use the `CameraSession::aimAssist()` builder so you can start from `Camera::of($player)`:
+
+```php
+use kim\present\cameraapi\Camera;
+use kim\present\cameraapi\aimassist\VanillaAimAssistPresetIds;
+
+// Enable the built-in entity-only aim-assist preset with default angle/distance
+$session = Camera::of($player);
+$session->aimAssist()
+    ->preset(VanillaAimAssistPresetIds::ENTITY_ONLY)
+    ->send();
+```
+
+If you need to override angle, distance, or target mode:
+
+```php
+use kim\present\cameraapi\Camera;
+use kim\present\cameraapi\aimassist\VanillaAimAssistPresetIds;
+use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistTargetMode;
+
+Camera::of($player)->aimAssist()
+    ->preset(VanillaAimAssistPresetIds::MINECRAFT_DEFAULT)
+    ->viewAngle(60.0, 45.0)                              // yaw/pitch half-angles
+    ->distance(24.0)                                     // max targeting distance
+    ->targetMode(CameraAimAssistTargetMode::ANGLE)       // or ::DISTANCE
+    ->send();
+```
+
+To clear an active aim-assist configuration, use `CameraAimAssistActionType::CLEAR`:
+
+```php
+use kim\present\cameraapi\Camera;
+use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistActionType;
+
+Camera::of($player)->aimAssist()
+    ->action(CameraAimAssistActionType::CLEAR)
+    ->send();
+```
+
+---
+
 ## Implementation & Architecture Overview
 
 - **Plugin entry (`Main`)**
   - Extends PMMP `PluginBase` and implements `Listener`.
   - Calls `CameraSessionManager::init()` and registers event listeners in `onEnable()`.
-  - On `PlayerJoinEvent`: creates session + syncs presets; on `PlayerQuitEvent`: removes session.
+  - Initializes and syncs both camera presets and aim‑assist presets:
+    - On `PlayerJoinEvent`: creates session + calls `CameraPresetRegistry::sendTo($player)` and
+      `AimAssistPresetRegistry::sendTo($player)`.
+    - On `PlayerQuitEvent`: removes session.
   - Hooks `DataPacketSendEvent` and sets the `experimental_creator_cameras` flag on `StartGamePacket` /
     `ResourcePackStackPacket` `Experiments`.
 

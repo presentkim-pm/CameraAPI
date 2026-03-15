@@ -40,7 +40,6 @@ use kim\present\cameraapi\timeline\CameraTimeline;
 use pocketmine\entity\Entity;
 use pocketmine\network\mcpe\protocol\CameraInstructionPacket;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
-use pocketmine\network\mcpe\protocol\ClientboundControlSchemeSetPacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\player\Player;
 use pocketmine\scheduler\TaskHandler;
@@ -128,16 +127,13 @@ final class CameraSession{
     }
 
     /**
-     * Sends a control scheme packet to the player (e.g. from {@see ControlSchemePackets}).
-     * Some schemes require a specific camera preset (e.g. follow_orbit, fixed_boom) to take effect.
+     * Creates a control scheme builder for this session's player.
      *
-     * @param ClientboundControlSchemeSetPacket $packet Packet from ControlSchemePackets (e.g.
-     *                                                  ControlSchemePackets::LOCKED_PLAYER_RELATIVE_STRAFE())
-     *
-     * @return self
+     * This replaces the older direct packet API and provides a fluent entry point:
+     * `Camera::of($player)->controlScheme()->cameraRelative()`.
      */
-    public function controlScheme(ClientboundControlSchemeSetPacket $packet) : self{
-        return $this->sendPacket($packet);
+    public function controlScheme() : ControlSchemeBuilder{
+        return new ControlSchemeBuilder($this);
     }
 
     /**

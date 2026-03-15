@@ -126,7 +126,7 @@ The session keeps camera context per player and provides builders and utility me
   - `target() : CameraTargetBuilder`
   - `fov() : CameraFovBuilder`
   - `fog() : CameraFogBuilder` – manage client-side fog (atmosphere) layers (see §2.5).
-  - `controlScheme(ClientboundControlSchemeSetPacket $packet) : self` – send a control scheme packet (see §2.7).
+  - `controlScheme() : ControlSchemeBuilder` – fluent control scheme sender (see §2.7).
   - `attachToEntity(Entity|int $entityOrRuntimeId) : self` – attach camera to an entity or runtime ID, e.g. POV spectator (see §2.8).
   - `detachFromEntity() : self` – detach camera from the current entity (see §2.8).
   - `hud(HudPreset|string $presetOrName) : self` – apply a HUD preset by instance or registry name (see §6).
@@ -288,22 +288,24 @@ $session->stopShake();
 $session->clear();
 ```
 
-#### 2.7 Control scheme: `controlScheme(ClientboundControlSchemeSetPacket $packet)`
+#### 2.7 Control scheme: `controlScheme() : ControlSchemeBuilder`
 
 Sends a control scheme packet to the player to change how movement/input is interpreted (e.g. camera-relative vs player-relative). Use the predefined packets from `ControlSchemePackets`. Some schemes require a specific camera preset (e.g. `follow_orbit` or `fixed_boom`) to take effect.
 
 ```php
 use kim\present\cameraapi\Camera;
-use kim\present\cameraapi\utils\ControlSchemePackets;
 
 $session = Camera::of($player);
 
 // Lock player-relative strafe (commonly used with free camera)
-$session->controlScheme(ControlSchemePackets::LOCKED_PLAYER_RELATIVE_STRAFE());
+$session->controlScheme()->lockedPlayerRelativeStrafe();
 
 // Camera-relative controls (requires follow_orbit or fixed_boom preset)
 $session->set()->preset("minecraft:follow_orbit")->send();
-$session->controlScheme(ControlSchemePackets::CAMERA_RELATIVE());
+$session->controlScheme()->cameraRelative();
+
+// Name-based sending (case-insensitive)
+$session->controlScheme()->byName("CAMERA_RELATIVE_STRAFE");
 ```
 
 - **Available schemes** (from `ControlSchemePackets`)

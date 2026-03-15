@@ -269,7 +269,7 @@ final class CameraTimeline{
      */
     public function controlScheme(ClientboundControlSchemeSetPacket $packet) : self{
         return $this->add(function(CameraSession $session) use ($packet) : void{
-            $session->controlScheme($packet);
+            $session->controlScheme()->send($packet);
         });
     }
 

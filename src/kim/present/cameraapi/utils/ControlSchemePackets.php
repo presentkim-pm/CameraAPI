@@ -29,31 +29,88 @@ namespace kim\present\cameraapi\utils;
 
 use pocketmine\network\mcpe\protocol\ClientboundControlSchemeSetPacket;
 use pocketmine\network\mcpe\protocol\types\ControlScheme;
-use pocketmine\utils\RegistryTrait;
 
 /**
- * Provides {@link ClientboundControlSchemeSetPacket} to simplify player control scheme.
+ * Provides ClientboundControlSchemeSetPacket to simplify player control scheme.
  * Some schemes need to be set to a specific camera before they are applied.
- *
- * @method static ClientboundControlSchemeSetPacket LOCKED_PLAYER_RELATIVE_STRAFE
- * @method static ClientboundControlSchemeSetPacket CAMERA_RELATIVE Required follow_orbit or fixed_boom
- * @method static ClientboundControlSchemeSetPacket CAMERA_RELATIVE_STRAFE Required follow_orbit or fixed_boom
- * @method static ClientboundControlSchemeSetPacket PLAYER_RELATIVE Required fixed_boom
- * @method static ClientboundControlSchemeSetPacket PLAYER_RELATIVE_STRAFE Required fixed_boom
  */
 final class ControlSchemePackets{
-    use RegistryTrait;
 
-    protected static function setup() : void{
-        foreach([
-                    "LOCKED_PLAYER_RELATIVE_STRAFE" => ControlScheme::LOCKED_PLAYER_RELATIVE_STRAFE,
-                    "CAMERA_RELATIVE" => ControlScheme::CAMERA_RELATIVE,
-                    "CAMERA_RELATIVE_STRAFE" => ControlScheme::CAMERA_RELATIVE_STRAFE,
-                    "PLAYER_RELATIVE" => ControlScheme::PLAYER_RELATIVE,
-                    "PLAYER_RELATIVE_STRAFE" => ControlScheme::PLAYER_RELATIVE_STRAFE,
-                ] as $name => $scheme
-        ){
-            self::_registryRegister($name, ClientboundControlSchemeSetPacket::create($scheme));
-        }
+    private function __construct(){
+        //NOOP
     }
+
+    /**
+     * @return ClientboundControlSchemeSetPacket[]
+     * @phpstan-return array<string, ClientboundControlSchemeSetPacket>
+     */
+    public static function getAll() : array{
+        return [
+            "LOCKED_PLAYER_RELATIVE_STRAFE" => self::LOCKED_PLAYER_RELATIVE_STRAFE(),
+            "CAMERA_RELATIVE" => self::CAMERA_RELATIVE(),
+            "CAMERA_RELATIVE_STRAFE" => self::CAMERA_RELATIVE_STRAFE(),
+            "PLAYER_RELATIVE" => self::PLAYER_RELATIVE(),
+            "PLAYER_RELATIVE_STRAFE" => self::PLAYER_RELATIVE_STRAFE()
+        ];
+    }
+
+    public static function get(string $name) : ClientboundControlSchemeSetPacket{
+        return match (strtoupper($name)) {
+            "LOCKED_PLAYER_RELATIVE_STRAFE" => self::LOCKED_PLAYER_RELATIVE_STRAFE(),
+            "CAMERA_RELATIVE"               => self::CAMERA_RELATIVE(),
+            "CAMERA_RELATIVE_STRAFE"        => self::CAMERA_RELATIVE_STRAFE(),
+            "PLAYER_RELATIVE"               => self::PLAYER_RELATIVE(),
+            "PLAYER_RELATIVE_STRAFE"        => self::PLAYER_RELATIVE_STRAFE(),
+            default                         => throw new \InvalidArgumentException("'$name' is invalid control scheme name")
+        };
+    }
+
+    /**
+     * Move relative to the player and follow the facing.
+     */
+    public static function LOCKED_PLAYER_RELATIVE_STRAFE() : ClientboundControlSchemeSetPacket{
+        static $cache = null;
+        return $cache ??= ClientboundControlSchemeSetPacket::create(ControlScheme::LOCKED_PLAYER_RELATIVE_STRAFE);
+    }
+
+    /**
+     * Move relative to the camera, keep the viewing angle horizontal and follow the direction of movement.
+     *
+     * Required set camera preset to `follow_orbit` or `fixed_boom`
+     */
+    public static function CAMERA_RELATIVE() : ClientboundControlSchemeSetPacket{
+        static $cache = null;
+        return $cache ??= ClientboundControlSchemeSetPacket::create(ControlScheme::CAMERA_RELATIVE);
+    }
+
+    /**
+     * Move relative to the camera, keep the viewing angle horizontal and follow the facing.
+     *
+     * Required set camera preset to `follow_orbit` or `fixed_boom`
+     */
+    public static function CAMERA_RELATIVE_STRAFE() : ClientboundControlSchemeSetPacket{
+        static $cache = null;
+        return $cache ??= ClientboundControlSchemeSetPacket::create(ControlScheme::CAMERA_RELATIVE_STRAFE);
+    }
+
+    /**
+     * Move relative to the player, keep the viewing angle horizontal and follow the direction of movement.
+     *
+     * Required set camera preset to `fixed_boom`
+     */
+    public static function PLAYER_RELATIVE() : ClientboundControlSchemeSetPacket{
+        static $cache = null;
+        return $cache ??= ClientboundControlSchemeSetPacket::create(ControlScheme::PLAYER_RELATIVE);
+    }
+
+    /**
+     * Move relative to the player, keep the viewing angle horizontal and follow the facing.
+     *
+     * Required set camera preset to `fixed_boom`
+     */
+    public static function PLAYER_RELATIVE_STRAFE() : ClientboundControlSchemeSetPacket{
+        static $cache = null;
+        return $cache ??= ClientboundControlSchemeSetPacket::create(ControlScheme::PLAYER_RELATIVE_STRAFE);
+    }
+
 }

@@ -41,6 +41,7 @@ use pocketmine\entity\Entity;
 use pocketmine\network\mcpe\protocol\CameraInstructionPacket;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
+use pocketmine\network\mcpe\protocol\PlayerFogPacket;
 use pocketmine\player\Player;
 use pocketmine\scheduler\TaskHandler;
 
@@ -307,6 +308,29 @@ final class CameraSession{
             attachToEntity: null,
             detachFromEntity: null
         ));
+    }
+
+    /**
+     * Stops all timeline tasks and restores the client's camera, fog and HUD to their defaults.
+     *
+     * Used when the plugin is disabled, so players are not left with a frozen camera, leftover fog layers or a
+     * hidden HUD once nothing is controlling them anymore.
+     *
+     * @return self
+     */
+    public function reset() : self{
+        $this->stop();
+        $this->clear();
+        $this->detachFromEntity();
+
+        if($this->fogStack !== []){
+            $this->fogStack = [];
+            $this->sendPacket(PlayerFogPacket::create([]));
+        }
+
+        // Not looked up through HudPresetRegistry, since built-in names can be overwritten there
+        (new HudPreset())->send($this);
+        return $this;
     }
 
     /**

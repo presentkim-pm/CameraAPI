@@ -347,7 +347,9 @@ final class CameraTimeline{
         }
 
         if($this->loop && $this->timelineLengthSeconds > 0.0){
-            $totalTicks = (int) ($this->timelineLengthSeconds * 20);
+            // Only the last chunk (everything after the final waitUntil(), or the whole timeline when there are no
+            // signals) is still running at this point, so the restart must wait for that chunk's length only.
+            $totalTicks = max(1, (int) ($this->chunkCursorSeconds * 20));
             $loopTask = $scheduler->scheduleDelayedTask(new ClosureTask(function() use ($session) : void{
                 if($session->getPlayer() !== null && $session->getPlayer()->isConnected()){
                     $this->play($session);

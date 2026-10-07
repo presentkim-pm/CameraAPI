@@ -60,7 +60,15 @@ final class Main extends PluginBase implements Listener{
     protected function onEnable() : void{
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
         AimAssistPresetRegistry::init();
+        CameraPresetRegistry::init();
         CameraSessionManager::init();
+
+        // Players who are already online (e.g. the plugin was enabled after startup) never fire PlayerJoinEvent
+        foreach($this->getServer()->getOnlinePlayers() as $player){
+            if(CameraSessionManager::getSession($player) === null){
+                CameraSessionManager::createSession($player);
+            }
+        }
     }
 
     protected function onDisable() : void{

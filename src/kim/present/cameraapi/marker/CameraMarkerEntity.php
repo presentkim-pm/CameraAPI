@@ -64,7 +64,7 @@ use Ramsey\Uuid\UuidInterface;
  */
 final class CameraMarkerEntity extends Entity implements NeverSavedWithChunkEntity{
 
-    private static Skin $skin;
+    private static ?Skin $skin = null;
 
     /**
      * Sets the skin used for all camera marker entities (e.g. a transparent or minimal skin).
@@ -77,6 +77,13 @@ final class CameraMarkerEntity extends Entity implements NeverSavedWithChunkEnti
     }
 
     private UuidInterface $uuid;
+
+    /**
+     * Players allowed to see this marker, keyed by their UUID; null when everyone can see it.
+     *
+     * @var array<string, true>|null
+     */
+    private ?array $viewers = null;
 
     /** @var null|\Closure(CameraMarkerEntity, Player): void $onAttack Callback to player attack (left-click) */
     private ?\Closure $onAttack = null;
@@ -117,6 +124,7 @@ final class CameraMarkerEntity extends Entity implements NeverSavedWithChunkEnti
      * @param Player $player The player who will see the marker.
      */
     protected function sendSpawnPacket(Player $player) : void{
+        $skin = self::$skin ?? throw new \LogicException("CameraMarkerEntity::setSkin() must be called before spawning markers");
         $networkSession = $player->getNetworkSession();
         $typeConverter = $networkSession->getTypeConverter();
 
@@ -125,7 +133,7 @@ final class CameraMarkerEntity extends Entity implements NeverSavedWithChunkEnti
                 $this->uuid,
                 $this->id,
                 $this->getNameTag(),
-                $typeConverter->getSkinAdapter()->toSkinData(self::$skin))
+                $typeConverter->getSkinAdapter()->toSkinData($skin))
         ]));
 
         $networkSession->sendDataPacket(AddPlayerPacket::create(
@@ -156,6 +164,50 @@ final class CameraMarkerEntity extends Entity implements NeverSavedWithChunkEnti
         $this->sendData([$player],
             [EntityMetadataProperties::NAMETAG => new StringMetadataProperty($this->getNameTag())]);
         $networkSession->sendDataPacket(PlayerListPacket::remove([PlayerListEntry::createRemovalEntry($this->uuid)]));
+    }
+
+    /**
+     * Restricts which players can see this marker.
+     *
+     * Players who are no longer allowed to see it get the marker despawned, and allowed players in range get it
+     * spawned. Markers are visible to everyone by default.
+     *
+     * @param Player[]|null $players The players that may see the marker; null to show it to everyone.
+     */
+    public function setViewers(?array $players) : void{
+        $this->viewers = null;
+        if($players !== null){
+            $this->viewers = [];
+            foreach($players as $player){
+                $this->viewers[$player->getUniqueId()->toString()] = true;
+            }
+        }
+
+        if($this->isClosed() || $this->isFlaggedForDespawn()){
+            return;
+        }
+        foreach($this->hasSpawned as $player){
+            if(!$this->canBeSeenBy($player)){
+                $this->despawnFrom($player);
+            }
+        }
+        // spawnTo() skips players that already see the marker or do not have its chunk
+        foreach($this->getWorld()->getPlayers() as $player){
+            $this->spawnTo($player);
+        }
+    }
+
+    /**
+     * Whether the given player is allowed to see this marker (see {@see self::setViewers()}).
+     */
+    public function canBeSeenBy(Player $player) : bool{
+        return $this->viewers === null || isset($this->viewers[$player->getUniqueId()->toString()]);
+    }
+
+    public function spawnTo(Player $player) : void{
+        if($this->canBeSeenBy($player)){
+            parent::spawnTo($player);
+        }
     }
 
     public function attack(EntityDamageEvent $source) : void{

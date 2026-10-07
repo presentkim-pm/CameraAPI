@@ -40,7 +40,7 @@ use pocketmine\player\Player;
  */
 final class CameraSessionManager{
 
-    /** @var \WeakMap<int, CameraSession> */
+    /** @var \WeakMap<Player, CameraSession> */
     private static \WeakMap $sessions;
 
     /**

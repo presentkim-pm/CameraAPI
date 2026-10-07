@@ -59,6 +59,8 @@ final class CameraSession{
     /** @var array<int, array{float, \Closure|string}> */
     private array $pausedTimelineQueue = [];
     private ?CameraTimeline $pausedTimeline = null;
+    /** @var list<array{fogId: string, userProvidedId: string}> */
+    private array $fogStack = [];
 
     /**
      * @param Player $player The player associated with this session.
@@ -124,6 +126,24 @@ final class CameraSession{
      */
     public function fog() : CameraFogBuilder{
         return new CameraFogBuilder($this);
+    }
+
+    /**
+     * Returns the fog stack last sent to the client through {@see CameraFogBuilder::send()}.
+     *
+     * @return list<array{fogId: string, userProvidedId: string}>
+     */
+    public function getFogStack() : array{
+        return $this->fogStack;
+    }
+
+    /**
+     * @param list<array{fogId: string, userProvidedId: string}> $fogStack
+     *
+     * @internal Called by {@see CameraFogBuilder::send()}.
+     */
+    public function setFogStack(array $fogStack) : void{
+        $this->fogStack = $fogStack;
     }
 
     /**

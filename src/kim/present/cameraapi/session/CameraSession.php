@@ -33,6 +33,7 @@ use kim\present\cameraapi\camera\builder\CameraFovBuilder;
 use kim\present\cameraapi\camera\builder\CameraSetBuilder;
 use kim\present\cameraapi\camera\builder\CameraSplineBuilder;
 use kim\present\cameraapi\camera\builder\CameraTargetBuilder;
+use kim\present\cameraapi\aimassist\AimAssistActorPriorityBuilder;
 use kim\present\cameraapi\aimassist\AimAssistBuilder;
 use kim\present\cameraapi\hud\HudPreset;
 use kim\present\cameraapi\hud\HudPresetRegistry;
@@ -40,8 +41,12 @@ use kim\present\cameraapi\timeline\CameraTimeline;
 use pocketmine\entity\Entity;
 use pocketmine\network\mcpe\protocol\CameraInstructionPacket;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
+use pocketmine\network\mcpe\protocol\ClientboundControlSchemeSetPacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\PlayerFogPacket;
+use pocketmine\network\mcpe\protocol\types\camera\CameraFovInstruction;
+use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstruction;
+use pocketmine\network\mcpe\protocol\types\camera\CameraTargetInstruction;
 use pocketmine\player\Player;
 use pocketmine\scheduler\TaskHandler;
 
@@ -62,6 +67,15 @@ final class CameraSession{
     private ?CameraTimeline $pausedTimeline = null;
     /** @var list<array{fogId: string, userProvidedId: string}> */
     private array $fogStack = [];
+    private ?bool $clientAimAssistAllowed = null;
+
+    // Client state as last sent through this session (see reapply())
+    private ?CameraSetInstruction $currentSet = null;
+    private ?CameraFovInstruction $currentFov = null;
+    private ?CameraTargetInstruction $currentTarget = null;
+    private ?int $attachedEntityId = null;
+    private ?HudPreset $currentHud = null;
+    private ?ClientboundControlSchemeSetPacket $currentControlScheme = null;
 
     /**
      * @param Player $player The player associated with this session.
@@ -242,6 +256,27 @@ final class CameraSession{
     }
 
     /**
+     * Creates a builder that overrides the aim assist priority of individual actors.
+     */
+    public function aimAssistActorPriority() : AimAssistActorPriorityBuilder{
+        return new AimAssistActorPriorityBuilder($this);
+    }
+
+    /**
+     * Whether the client allows aim assist, as last reported by the client; null if it has not reported yet.
+     */
+    public function isClientAimAssistAllowed() : ?bool{
+        return $this->clientAimAssistAllowed;
+    }
+
+    /**
+     * @internal Called when the client reports a change of its aim assist setting.
+     */
+    public function setClientAimAssistAllowed(bool $allowed) : void{
+        $this->clientAimAssistAllowed = $allowed;
+    }
+
+    /**
      * Creates a builder for 'Camera Spline' instruction.
      * Used to create smooth cinematic camera paths.
      *
@@ -344,6 +379,174 @@ final class CameraSession{
         $player = $this->getPlayer();
         if($player !== null && $player->isConnected()){
             $player->getNetworkSession()->sendDataPacket($pk);
+            $this->track($pk);
+        }
+        return $this;
+    }
+
+    /**
+     * Remembers the client state a packet sent through this session changes.
+     */
+    private function track(ClientboundPacket $pk) : void{
+        if($pk instanceof ClientboundControlSchemeSetPacket){
+            $this->currentControlScheme = $pk;
+            return;
+        }
+        if(!$pk instanceof CameraInstructionPacket){
+            return;
+        }
+
+        if($pk->getClear() === true){
+            $this->currentSet = null;
+            $this->currentFov = null;
+            $this->currentTarget = null;
+        }
+        if($pk->getSet() !== null){
+            $this->currentSet = $pk->getSet();
+        }
+        $fov = $pk->getFieldOfView();
+        if($fov !== null){
+            $this->currentFov = $fov->getClear() ? null : $fov;
+        }
+        if($pk->getTarget() !== null){
+            $this->currentTarget = $pk->getTarget();
+        }
+        if($pk->getRemoveTarget() === true){
+            $this->currentTarget = null;
+        }
+        if($pk->getAttachToEntity() !== null){
+            $this->attachedEntityId = $pk->getAttachToEntity();
+        }
+        if($pk->getDetachFromEntity() === true){
+            $this->attachedEntityId = null;
+        }
+    }
+
+    /**
+     * Returns the camera set instruction that is currently active on the client, or null if there is none
+     * (nothing was set yet, or the camera was cleared).
+     */
+    public function getCurrentSet() : ?CameraSetInstruction{
+        return $this->currentSet;
+    }
+
+    /**
+     * Returns the FOV instruction that is currently active on the client, or null if there is none.
+     */
+    public function getCurrentFov() : ?CameraFovInstruction{
+        return $this->currentFov;
+    }
+
+    /**
+     * Returns the target instruction that is currently active on the client, or null if there is none.
+     */
+    public function getCurrentTarget() : ?CameraTargetInstruction{
+        return $this->currentTarget;
+    }
+
+    /**
+     * Returns the runtime ID of the entity the camera is attached to, or null if it is not attached.
+     */
+    public function getAttachedEntityId() : ?int{
+        return $this->attachedEntityId;
+    }
+
+    /**
+     * Returns the HUD preset last applied through the plugin, or null if the HUD was never changed.
+     */
+    public function getCurrentHud() : ?HudPreset{
+        return $this->currentHud;
+    }
+
+    /**
+     * Returns the control scheme packet last sent through this session, or null if none was sent.
+     */
+    public function getCurrentControlScheme() : ?ClientboundControlSchemeSetPacket{
+        return $this->currentControlScheme;
+    }
+
+    /**
+     * @internal Called by {@see HudPreset::send()}.
+     */
+    public function setCurrentHud(HudPreset $hud) : void{
+        $this->currentHud = $hud;
+    }
+
+    /**
+     * Sends the remembered camera, FOV, target, attachment, HUD, control scheme and fog state to the client
+     * again.
+     *
+     * Use it when the client may have lost that state, for example after a respawn or dimension change. Eases are
+     * dropped so the restored state is applied immediately instead of animating again.
+     *
+     * @return self
+     */
+    public function reapply() : self{
+        if($this->currentSet !== null){
+            $set = $this->currentSet;
+            $this->sendPacket(CameraInstructionPacket::create(
+                set: new CameraSetInstruction(
+                    $set->getPreset(),
+                    null,
+                    $set->getCameraPosition(),
+                    $set->getRotation(),
+                    $set->getFacingPosition(),
+                    $set->getViewOffset(),
+                    $set->getEntityOffset(),
+                    $set->getDefault(),
+                    false
+                ),
+                clear: null,
+                fade: null,
+                target: null,
+                removeTarget: null,
+                fieldOfView: null,
+                spline: null,
+                attachToEntity: null,
+                detachFromEntity: null
+            ));
+        }
+        if($this->currentFov !== null){
+            $fov = $this->currentFov;
+            $this->sendPacket(CameraInstructionPacket::create(
+                set: null,
+                clear: null,
+                fade: null,
+                target: null,
+                removeTarget: null,
+                fieldOfView: new CameraFovInstruction($fov->getFieldOfView(), 0.0, $fov->getEaseType(), false),
+                spline: null,
+                attachToEntity: null,
+                detachFromEntity: null
+            ));
+        }
+        if($this->currentTarget !== null){
+            $this->sendPacket(CameraInstructionPacket::create(
+                set: null,
+                clear: null,
+                fade: null,
+                target: $this->currentTarget,
+                removeTarget: null,
+                fieldOfView: null,
+                spline: null,
+                attachToEntity: null,
+                detachFromEntity: null
+            ));
+        }
+        if($this->attachedEntityId !== null){
+            $this->attachToEntity($this->attachedEntityId);
+        }
+        if($this->currentHud !== null){
+            $this->currentHud->send($this);
+        }
+        if($this->currentControlScheme !== null){
+            $this->sendPacket($this->currentControlScheme);
+        }
+        if($this->fogStack !== []){
+            $this->sendPacket(PlayerFogPacket::create(array_map(
+                static fn(array $entry) : string => $entry['fogId'],
+                $this->fogStack
+            )));
         }
         return $this;
     }
@@ -364,6 +567,29 @@ final class CameraSession{
         $this->pausedTimeline = null;
 
         return $this;
+    }
+
+    /**
+     * Whether a timeline is currently running for this session, i.e. it still has scheduled steps or is paused on
+     * {@see CameraTimeline::waitUntil()}.
+     */
+    public function isTimelinePlaying() : bool{
+        if($this->waitingSignal !== null){
+            return true;
+        }
+        foreach($this->activeTasks as $task){
+            if(!$task->isCancelled()){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns the name of the signal the current timeline is waiting for, or null if it is not waiting.
+     */
+    public function getWaitingSignal() : ?string{
+        return $this->waitingSignal;
     }
 
     /**

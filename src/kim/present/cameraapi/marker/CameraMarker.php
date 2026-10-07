@@ -133,6 +133,18 @@ final readonly class CameraMarker{
     }
 
     /**
+     * Restricts which players can see the marker (e.g. only the administrators editing a cutscene).
+     *
+     * @param Player[]|null $players The players that may see the marker; null to show it to everyone again.
+     *
+     * @return self For chaining.
+     */
+    public function setViewers(?array $players) : self{
+        $this->entity->setViewers($players);
+        return $this;
+    }
+
+    /**
      * Applies this marker's pose to a CameraSession.
      *
      * The camera will be positioned at the marker's location, using its

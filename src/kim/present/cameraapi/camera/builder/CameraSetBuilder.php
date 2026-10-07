@@ -66,6 +66,7 @@ final class CameraSetBuilder{
     private ?Vector2 $viewOffset = null;
     private ?Vector3 $entityOffset = null;
     private ?bool $default = null;
+    private bool $removeIgnoreStartingValues = false;
 
     public function __construct(
         private readonly CameraSession $session
@@ -139,11 +140,16 @@ final class CameraSetBuilder{
      * - Y: up (+) / down (-)
      * - Z: forward (+) / backward (-)
      *
-     * @param Vector3 $offset Local-space offset.
+     * The offset is applied relative to the player's feet position. Only the player's yaw is used by default, so
+     * "forward" stays horizontal; pass `$followPitch = true` to also tilt the Y/Z axes by the player's pitch
+     * (e.g. to place the camera along the line of sight).
+     *
+     * @param Vector3 $offset      Local-space offset.
+     * @param bool    $followPitch Whether the offset also follows the player's pitch.
      *
      * @return self
      */
-    public function positionLocal(Vector3 $offset) : self{
+    public function positionLocal(Vector3 $offset, bool $followPitch = false) : self{
         $player = $this->session->getPlayer();
         if($player === null || !$player->isConnected()){
             return $this;
@@ -151,7 +157,12 @@ final class CameraSetBuilder{
 
         $location = $player->getLocation();
         $basePos = new Vector3($location->getX(), $location->getY(), $location->getZ());
-        $this->cameraPosition = $this->calculateLocalPosition($basePos, $location->getYaw(), $offset);
+        $this->cameraPosition = $this->calculateLocalPosition(
+            $basePos,
+            $location->getYaw(),
+            $offset,
+            $followPitch ? $location->getPitch() : 0.0
+        );
 
         return $this;
     }
@@ -246,11 +257,12 @@ final class CameraSetBuilder{
      *
      * Uses the same local axes and rotation rules as {@see positionLocal()}.
      *
-     * @param Vector3 $offset Local-space offset.
+     * @param Vector3 $offset      Local-space offset.
+     * @param bool    $followPitch Whether the offset also follows the player's pitch.
      *
      * @return self
      */
-    public function facingLocal(Vector3 $offset) : self{
+    public function facingLocal(Vector3 $offset, bool $followPitch = false) : self{
         $player = $this->session->getPlayer();
         if($player === null || !$player->isConnected()){
             return $this;
@@ -258,7 +270,12 @@ final class CameraSetBuilder{
 
         $location = $player->getLocation();
         $basePos = new Vector3($location->getX(), $location->getY(), $location->getZ());
-        $this->facingPosition = $this->calculateLocalPosition($basePos, $location->getYaw(), $offset);
+        $this->facingPosition = $this->calculateLocalPosition(
+            $basePos,
+            $location->getYaw(),
+            $offset,
+            $followPitch ? $location->getPitch() : 0.0
+        );
 
         return $this;
     }
@@ -316,29 +333,40 @@ final class CameraSetBuilder{
      *  X = -cos(deg2rad(yaw))
      *  Z = -sin(deg2rad(yaw))
      *
+     * With a pitch, forward becomes (-sin(yaw)cos(pitch), -sin(pitch), cos(yaw)cos(pitch)) and up becomes
+     * (-sin(yaw)sin(pitch), cos(pitch), cos(yaw)sin(pitch)).
+     *
      * @param Vector3 $basePos Player world position.
      * @param float   $yaw     Player yaw in degrees.
      * @param Vector3 $offset  Local-space offset.
+     * @param float   $pitch   Player pitch in degrees that tilts the forward/up axes (0 keeps them horizontal/vertical).
      *
      * @return Vector3 World-space position.
      */
-    private function calculateLocalPosition(Vector3 $basePos, float $yaw, Vector3 $offset) : Vector3{
+    private function calculateLocalPosition(Vector3 $basePos, float $yaw, Vector3 $offset, float $pitch = 0.0) : Vector3{
         $rad = deg2rad($yaw);
+        $sinYaw = sin($rad);
+        $cosYaw = cos($rad);
+        $pitchRad = deg2rad($pitch);
+        $sinPitch = sin($pitchRad);
+        $cosPitch = cos($pitchRad);
 
-        $forwardX = -sin($rad);
-        $forwardZ = cos($rad);
+        // The right vector stays horizontal; forward and up are tilted by the pitch (identity when pitch is 0)
+        $rightX = -$cosYaw;
+        $rightZ = -$sinYaw;
 
-        $rightX = -cos($rad);
-        $rightZ = -sin($rad);
+        $forwardX = -$sinYaw * $cosPitch;
+        $forwardY = -$sinPitch;
+        $forwardZ = $cosYaw * $cosPitch;
 
-        $dx = $rightX * $offset->x + $forwardX * $offset->z;
-        $dy = $offset->y;
-        $dz = $rightZ * $offset->x + $forwardZ * $offset->z;
+        $upX = -$sinYaw * $sinPitch;
+        $upY = $cosPitch;
+        $upZ = $cosYaw * $sinPitch;
 
         return new Vector3(
-            $basePos->x + $dx,
-            $basePos->y + $dy,
-            $basePos->z + $dz
+            $basePos->x + $rightX * $offset->x + $upX * $offset->y + $forwardX * $offset->z,
+            $basePos->y + $upY * $offset->y + $forwardY * $offset->z,
+            $basePos->z + $rightZ * $offset->x + $upZ * $offset->y + $forwardZ * $offset->z
         );
     }
 
@@ -366,7 +394,7 @@ final class CameraSetBuilder{
             $this->viewOffset,
             $this->entityOffset,
             $this->default,
-            false
+            $this->removeIgnoreStartingValues
         );
     }
 

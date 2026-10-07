@@ -48,7 +48,7 @@
 ### Installation & Requirements
 
 - **Server**
-  - PocketMine-MP `5.0.0` or higher.
+  - PocketMine-MP `5.42.0` or higher (`plugin.yml` `api`). The spline and rotation-easing packets need BedrockProtocol 56 (Bedrock 1.26.10).
 - **Installation**
   - Clone this repository or place the `CameraAPI` plugin folder into your PMMP server's `plugins` directory.
   - Restart the server; the plugin will load automatically according to `plugin.yml`.
@@ -131,6 +131,10 @@ The session keeps camera context per player and provides builders and utility me
   - `detachFromEntity() : self` – detach camera from the current entity (see §2.8).
   - `hud(HudPreset|string $presetOrName) : self` – apply a HUD preset by instance or registry name (see §6).
   - `aimAssist() : AimAssistBuilder` – configure and send a camera aim‑assist packet (see §7.4).
+  - `aimAssistActorPriority() : AimAssistActorPriorityBuilder` – override the aim‑assist priority of single actors (see §7.5).
+  - `isClientAimAssistAllowed() : ?bool` – aim assist setting last reported by the client (null until it reports; see §7.5).
+  - `reapply() : self` – send the remembered camera / FOV / target / attachment / HUD / control scheme / fog state again (see §2.9).
+  - `isTimelinePlaying() : bool` / `getWaitingSignal() : ?string` – query the running timeline (see §3).
   - `spline() : CameraSplineBuilder` (**deprecated**, do not use in production)
   - `shake(float $intensity = 0.5, float $duration = 1.0, int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
   - `stopShake(int $type = CameraShakePacket::TYPE_POSITIONAL) : self`
@@ -172,15 +176,16 @@ $session->set()
     - Use `CameraSetInstructionEaseType` constants (e.g. `EaseType::LINEAR`).
   - `position(Vector3 $position) : self`
   - `positionOffset(Vector3 $offset) : self` – world-space offset from the player's current position.
-  - `positionLocal(Vector3 $offset) : self` – local-space offset relative to the player's view (X: right/left, Y: up/down, Z: forward/backward).
+  - `positionLocal(Vector3 $offset, bool $followPitch = false) : self` – local-space offset relative to the player's view (X: right/left, Y: up/down, Z: forward/backward).
   - `rotation(float $pitch, float $yaw) : self`
   - `rotationTo(Vector3 $target) : self` – compute and set rotation so the camera at the current position looks at the given world-space target.
   - `facing(Vector3 $position) : self`
   - `facingOffset(Vector3 $offset) : self` – world-space offset for the target the camera should look at.
-  - `facingLocal(Vector3 $offset) : self` – local-space offset for the facing target, using the same convention as `positionLocal()`.
+  - `facingLocal(Vector3 $offset, bool $followPitch = false) : self` – local-space offset for the facing target, using the same convention as `positionLocal()`.
   - `viewOffset(Vector2 $offset) : self`
   - `entityOffset(Vector3 $offset) : self`
   - `setDefault(bool $value = true) : self`
+  - `removeIgnoreStartingValues(bool $remove = true) : self` – sets the protocol's `removeIgnoreStartingValuesComponent` flag.
   - `send() : CameraSession`
 
 **World vs local offsets**
@@ -190,6 +195,7 @@ $session->set()
   - X: right (+) / left (-)
   - Y: up (+) / down (-)
   - Z: forward (+) / backward (-)
+  - The offset is relative to the player's **feet** position. By default only the player's yaw is used (forward stays horizontal); pass `$followPitch = true` to tilt the forward/up axes by the player's pitch as well.
 
 #### 2.2 Screen Fade: `fade() : CameraFadeBuilder`
 
@@ -345,6 +351,23 @@ $session->detachFromEntity();
 - **detachFromEntity() : self** – sends a camera instruction to detach from the current entity.
 
 ---
+
+#### 2.9 State tracking: `reapply()`
+
+The session remembers what it sent to the client: the active camera `set` instruction, FOV, target, the attached
+entity, the last HUD preset (applied through the plugin), the control scheme and the fog stack. They are cleared again
+by `clear()`, a FOV clear, removing the target or detaching.
+
+- Getters: `getCurrentSet()`, `getCurrentFov()`, `getCurrentTarget()`, `getAttachedEntityId()`, `getCurrentHud()`,
+  `getCurrentControlScheme()`.
+- `reapply()` sends that state again, e.g. after the client may have lost it (respawn, dimension change). Eases are
+  dropped so nothing animates twice. Nothing is reapplied automatically; call it from your own event handler.
+
+```php
+public function onRespawn(PlayerRespawnEvent $event) : void{
+    Camera::of($event->getPlayer())->reapply();
+}
+```
 
 ### 3. `CameraTimeline` (Cutscenes / Sequences)
 
@@ -538,6 +561,20 @@ This is useful if non-programmers (builders / designers) need to tweak cutscenes
   { "type": "detachFromEntity" }
   ```
 
+- `hud` – apply a HUD preset registered in `HudPresetRegistry` (e.g. `DEFAULT`, `CLEAR`); unknown names fail when loading:
+
+  ```json
+  { "type": "hud", "preset": "CLEAR" }
+  ```
+
+- `aimAssist` – activate an aim‑assist preset, or clear it when `preset` is omitted / `"clear": true`. Optional `viewAngle` `[horizontal, vertical]`, `distance` (1–16), `targetMode` (`"angle"` / `"distance"`) and `debug`:
+
+  ```json
+  { "type": "aimAssist", "preset": "cameraapi:aim_assist_entity_only", "distance": 12 }
+  ```
+
+`set` steps also accept `viewOffset` `[x, y]`, `entityOffset` `[x, y, z]` and `default` (bool). Steps with an unknown `type` are skipped, and a warning is written to the server log.
+
 **Full example – `boss_intro.json`**
 
 ```json
@@ -632,6 +669,10 @@ use kim\present\cameraapi\camera\preset\CameraPresetRegistry;
 $id = CameraPresetRegistry::getIdByName("myplugin:topdown"); // int|null
 ```
 
+`CameraPresetBuilder::setAudioListenerType()` is unset (`null`) by default, so a preset inherits the audio listener type
+of its parent preset. Set `CameraPreset::AUDIO_LISTENER_TYPE_PLAYER` / `AUDIO_LISTENER_TYPE_CAMERA` explicitly if you
+want a fixed value.
+
 `CameraSetBuilder::preset()` internally uses `getIdByName()`, so in most cases you only need to pass the preset name
 string.
 
@@ -643,11 +684,13 @@ Camera markers are small in-world entities you can spawn to define camera positi
 fake players (with a plugin-supplied skin), support yaw/pitch from the spawn location, and can have an interact button
 and callbacks for left-click (attack) and right-click (interact). Use them for map creation or cutscene keyframes.
 
-- **Spawning**: `Camera::spawnMarker(Location $location, ?string $label = null) : CameraMarker`
+- **Spawning**: `Camera::spawnMarker(Location $location, ?string $label = null, ?array $viewers = null) : CameraMarker`
   - `$location` – world position and rotation (yaw/pitch) for the marker; e.g. use the player's location (optionally
     offset to eye height) so the marker faces the same direction.
+  - `$viewers` – optional list of `Player`s that may see the marker (e.g. only admins editing a cutscene); `null` shows it to everyone.
 - **Methods on `CameraMarker`**
   - `setPosition(Vector3 $pos)`, `lookAt(Vector3 $target)`, `setNameTag(string $name)`, `setInteractButton(string $buttonText)`
+  - `setViewers(?array $players)` – change who can see the marker later (`null` = everyone).
   - `setOnAttack(?\Closure $onAttack)` – callback when a player left-clicks the marker (e.g. remove it).
   - `setOnClick(?\Closure $onClick)` – callback when a player right-clicks the marker (e.g. apply marker to camera and play a timeline).
   - `applyToSession(CameraSession $session, ?int $easeType = null, ?float $easeDuration = null)` – sets the camera to the marker's position and rotation (vanilla FREE preset). Optionally pass an ease type (e.g. `CameraSetInstructionEaseType::LINEAR`) and duration in seconds for a smooth transition.
@@ -869,7 +912,7 @@ To explicitly re‑send the list or a single preset to a player:
 
 ```php
 use kim\present\cameraapi\aimassist\AimAssistPresetRegistry;
-use kim\present\cameraapi\aimassist\VanillaAimAssistPresetIds;
+use kim\present\cameraapi\aimassist\DefaultAimAssistPresetIds;
 use pocketmine\player\Player;
 
 function syncAimAssist(Player $player) : void{
@@ -975,12 +1018,12 @@ directly. Instead, use the `CameraSession::aimAssist()` builder so you can start
 
 ```php
 use kim\present\cameraapi\Camera;
-use kim\present\cameraapi\aimassist\VanillaAimAssistPresetIds;
+use kim\present\cameraapi\aimassist\DefaultAimAssistPresetIds;
 
 // Enable the built-in entity-only aim-assist preset with default angle/distance
 $session = Camera::of($player);
 $session->aimAssist()
-    ->preset(VanillaAimAssistPresetIds::ENTITY_ONLY)
+    ->preset(DefaultAimAssistPresetIds::ENTITY_ONLY)
     ->send();
 ```
 
@@ -992,23 +1035,35 @@ use kim\present\cameraapi\aimassist\VanillaAimAssistPresetIds;
 use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistTargetMode;
 
 Camera::of($player)->aimAssist()
-    ->preset(VanillaAimAssistPresetIds::MINECRAFT_DEFAULT)
-    ->viewAngle(60.0, 45.0)                              // yaw/pitch half-angles
-    ->distance(24.0)                                     // max targeting distance
+    ->preset(DefaultAimAssistPresetIds::MINECRAFT_DEFAULT)
+    ->viewAngle(60.0, 45.0)                              // horizontal/vertical angle (> 0)
+    ->distance(12.0)                                     // max targeting distance (1-16)
     ->targetMode(CameraAimAssistTargetMode::ANGLE)       // or ::DISTANCE
     ->send();
 ```
 
-To clear an active aim-assist configuration, use `CameraAimAssistActionType::CLEAR`:
+To clear an active aim-assist configuration, use `clear()` (or `preset(null)`):
 
 ```php
 use kim\present\cameraapi\Camera;
-use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistActionType;
 
 Camera::of($player)->aimAssist()
-    ->action(CameraAimAssistActionType::CLEAR)
+    ->clear()
     ->send();
 ```
+
+`distance()` only accepts 1–16 blocks, `viewAngle()` needs positive angles, and `send()` throws
+`\InvalidArgumentException` for a preset that is not registered in `AimAssistPresetRegistry`.
+
+#### 7.5 Actor priorities and the client's aim‑assist toggle
+
+- `Camera::of($player)->aimAssistActorPriority()->add($presetId, $categoryId, $actorId, $priority)->send()` overrides
+  the priority of an actor listed in a registered category. The builder resolves the preset/category/actor positions
+  that the protocol uses from `AimAssistPresetRegistry` (see `getPresetIndex()` / `getCategoryIndex()`). This packet
+  has not been verified against a real client yet.
+- When a client reports that its aim assist was switched on or off, the plugin stores it
+  (`CameraSession::isClientAimAssistAllowed()`) and calls `CameraAimAssistToggleEvent`
+  (`getPresetId()`, `getActionType()`, `isAimAssistAllowed()`).
 
 ---
 

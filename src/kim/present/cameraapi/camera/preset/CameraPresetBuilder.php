@@ -54,7 +54,7 @@ class CameraPresetBuilder{
     private ?Vector3 $entityOffset = null;
     private ?float $radius = null;
     private ?float $yawLimitMin = null, $yawLimitMax = null;
-    private int $audioListenerType = CameraPreset::AUDIO_LISTENER_TYPE_PLAYER;
+    private ?int $audioListenerType = null;
     private ?bool $playerEffects = null;
     private ?CameraPresetAimAssist $aimAssist = null;
     private ?ControlScheme $controlScheme = null;
@@ -295,11 +295,13 @@ class CameraPresetBuilder{
     /**
      * Sets the audio listener type (e.g., Player or Camera).
      *
-     * @param int $audioListenerType See CameraPreset constants.
+     * Not set by default (null), so the preset inherits the value of its parent preset.
+     *
+     * @param int|null $audioListenerType See CameraPreset constants; null to inherit from the parent.
      *
      * @return self
      */
-    public function setAudioListenerType(int $audioListenerType) : self{
+    public function setAudioListenerType(?int $audioListenerType) : self{
         $this->audioListenerType = $audioListenerType;
         return $this;
     }

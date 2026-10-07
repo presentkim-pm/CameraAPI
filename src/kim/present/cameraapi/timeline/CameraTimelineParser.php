@@ -32,11 +32,15 @@ use kim\present\cameraapi\camera\builder\CameraFogBuilder;
 use kim\present\cameraapi\camera\builder\CameraFovBuilder;
 use kim\present\cameraapi\camera\builder\CameraSetBuilder;
 use kim\present\cameraapi\camera\builder\CameraTargetBuilder;
+use kim\present\cameraapi\hud\HudPresetRegistry;
+use kim\present\cameraapi\Main;
 use kim\present\cameraapi\session\CameraSession;
 use kim\present\cameraapi\utils\ControlSchemePackets;
 use pocketmine\color\Color;
+use pocketmine\math\Vector2;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\CameraShakePacket;
+use pocketmine\network\mcpe\protocol\types\camera\CameraAimAssistTargetMode;
 use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstructionEaseType;
 
 /**
@@ -74,7 +78,8 @@ final class CameraTimelineParser{
      *      'steps' => [
      *          [
      *              'type'   => 'wait' | 'waitUntil' | 'shake' | 'stopShake' | 'clear' | 'set' | 'fade' | 'fov'
-     *                          | 'fog' | 'controlScheme' | 'target' | 'attachToEntity' | 'detachFromEntity',
+     *                          | 'fog' | 'controlScheme' | 'target' | 'attachToEntity' | 'detachFromEntity'
+     *                          | 'hud' | 'aimAssist',
      *              // ... additional fields depending on type ...
      *          ],
      *          // ...
@@ -162,8 +167,19 @@ final class CameraTimelineParser{
                     $timeline->detachFromEntity();
                     break;
 
+                case 'hud':
+                    self::addHudStep($timeline, $step);
+                    break;
+
+                case 'aimAssist':
+                    self::addAimAssistStep($timeline, $step);
+                    break;
+
                 default:
-                    // Unknown step type: ignore for forwards-compatibility.
+                    // Unknown step type: skipped for forwards-compatibility, but reported so typos are noticed.
+                    Main::getInstance()->getLogger()->warning(
+                        "Ignoring timeline step with unknown type " . var_export($type, true)
+                    );
                     break;
             }
         }
@@ -219,10 +235,102 @@ final class CameraTimelineParser{
                     );
                 }
 
+                if(isset($step['viewOffset']) && is_array($step['viewOffset']) && count($step['viewOffset']) >= 2){
+                    $builder->viewOffset(new Vector2(
+                        (float) $step['viewOffset'][0],
+                        (float) $step['viewOffset'][1]
+                    ));
+                }
+
+                if(isset($step['entityOffset']) && is_array($step['entityOffset']) && count($step['entityOffset']) >= 3){
+                    $builder->entityOffset(new Vector3(
+                        (float) $step['entityOffset'][0],
+                        (float) $step['entityOffset'][1],
+                        (float) $step['entityOffset'][2]
+                    ));
+                }
+
+                if(isset($step['default']) && is_bool($step['default'])){
+                    $builder->setDefault($step['default']);
+                }
+
                 if($ease !== null){
                     $builder->ease($ease[0], $ease[1]);
                 }
 
+                $builder->send();
+            }
+        );
+    }
+
+    /**
+     * Adds a "hud" step to the timeline.
+     *
+     * Schema: preset (name of a preset registered in {@see HudPresetRegistry}, e.g. "DEFAULT" or "CLEAR")
+     *
+     * @param CameraTimeline       $timeline
+     * @param array<string, mixed> $step
+     */
+    private static function addHudStep(CameraTimeline $timeline, array $step) : void{
+        $preset = (string) ($step['preset'] ?? '');
+        if(!HudPresetRegistry::isRegistered($preset)){
+            throw new \InvalidArgumentException("'hud' step requires a registered 'preset', got '$preset'.");
+        }
+
+        $timeline->add(static function(CameraSession $session) use ($preset) : void{
+            $session->hud($preset);
+        });
+    }
+
+    /**
+     * Adds an "aimAssist" step to the timeline.
+     *
+     * Schema:
+     *  - preset: aim assist preset identifier; omit it (or set `clear: true`) to clear the active aim assist
+     *  - viewAngle: [horizontal, vertical] in degrees
+     *  - distance: 1-16 blocks
+     *  - targetMode: "angle" | "distance"
+     *  - debug: bool
+     *
+     * @param CameraTimeline       $timeline
+     * @param array<string, mixed> $step
+     */
+    private static function addAimAssistStep(CameraTimeline $timeline, array $step) : void{
+        $targetMode = null;
+        if(isset($step['targetMode'])){
+            $targetMode = match(strtolower((string) $step['targetMode'])){
+                'angle' => CameraAimAssistTargetMode::ANGLE,
+                'distance' => CameraAimAssistTargetMode::DISTANCE,
+                default => throw new \InvalidArgumentException(
+                    "Invalid aim assist target mode: " . var_export($step['targetMode'], true)
+                )
+            };
+        }
+        $clear = ($step['clear'] ?? false) === true || !isset($step['preset']);
+        $viewAngle = isset($step['viewAngle']) && is_array($step['viewAngle']) && count($step['viewAngle']) >= 2
+            ? [(float) $step['viewAngle'][0], (float) $step['viewAngle'][1]] : null;
+        $distance = isset($step['distance']) ? (float) $step['distance'] : null;
+
+        $timeline->add(
+            static function(CameraSession $session) use ($step, $clear, $targetMode, $viewAngle, $distance) : void{
+                $builder = $session->aimAssist();
+                if($clear){
+                    $builder->clear();
+                }else{
+                    $builder->preset((string) $step['preset']);
+                }
+                if($viewAngle !== null){
+                    $builder->viewAngle($viewAngle[0], $viewAngle[1]);
+                }
+                if($distance !== null){
+                    $builder->distance($distance);
+                }
+                if($targetMode !== null){
+                    $builder->targetMode($targetMode);
+                }
+                if(($step['debug'] ?? false) === true){
+                    $builder->debug();
+                }
                 $builder->send();
             }
         );

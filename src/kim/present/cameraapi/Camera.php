@@ -107,10 +107,11 @@ final class Camera{
      *
      * @param Location    $location World coordinates (and yaw/pitch) where the marker should appear.
      * @param string|null $label    Optional name tag shown above the marker.
+     * @param Player[]|null $viewers Players that may see the marker; null (default) shows it to everyone.
      *
      * @return CameraMarker Wrapper to move, rotate, apply to a session, or remove the marker.
      */
-    public static function spawnMarker(Location $location, ?string $label = null) : CameraMarker{
+    public static function spawnMarker(Location $location, ?string $label = null, ?array $viewers = null) : CameraMarker{
         $world = $location->getWorld();
         self::ensureChunkLoaded($world, $location);
 
@@ -120,6 +121,7 @@ final class Camera{
             $entity->setNameTag($label);
         }
 
+        $entity->setViewers($viewers);
         $entity->spawnToAll();
 
         return new CameraMarker($entity);

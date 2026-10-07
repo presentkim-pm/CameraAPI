@@ -38,6 +38,7 @@ use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstructionEaseType a
  * This builder allows you to:
  * - Set the Field of View value
  * - Apply easing animations for FOV changes
+ * - Clear a previously set FOV (like `/camera fov_clear`)
  *
  * Example:
  * ```php
@@ -52,6 +53,7 @@ final class CameraFovBuilder{
     private float $fov = 70.0;
     private float $easeTime = 0.0;
     private int $easeType = EaseType::LINEAR;
+    private bool $clear = false;
 
     public function __construct(
         private readonly CameraSession $session
@@ -84,12 +86,25 @@ final class CameraFovBuilder{
     }
 
     /**
+     * Makes this instruction clear the FOV set by previous instructions instead of setting a new one.
+     * The ease set via {@see self::ease()} is used for the transition back.
+     *
+     * @param bool $clear
+     *
+     * @return self
+     */
+    public function clear(bool $clear = true) : self{
+        $this->clear = $clear;
+        return $this;
+    }
+
+    /**
      * Builds the CameraFovInstruction object.
      *
      * @return CameraFovInstruction
      */
     public function build() : CameraFovInstruction{
-        return new CameraFovInstruction($this->fov, $this->easeTime, $this->easeType, false);
+        return new CameraFovInstruction($this->fov, $this->easeTime, $this->easeType, $this->clear);
     }
 
     /**

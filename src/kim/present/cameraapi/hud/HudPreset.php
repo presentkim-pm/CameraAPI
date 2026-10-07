@@ -28,6 +28,7 @@ declare(strict_types=1);
 namespace kim\present\cameraapi\hud;
 
 use kim\present\cameraapi\session\CameraSession;
+use kim\present\cameraapi\session\CameraSessionManager;
 use pocketmine\network\mcpe\protocol\SetHudPacket;
 use pocketmine\network\mcpe\protocol\types\hud\HudElement;
 use pocketmine\network\mcpe\protocol\types\hud\HudVisibility;
@@ -129,6 +130,9 @@ final readonly class HudPreset{
         if($visibleElements !== []){
             $session->sendDataPacket(SetHudPacket::create($visibleElements, HudVisibility::RESET));
         }
+
+        ($target instanceof CameraSession ? $target : CameraSessionManager::getSession($player))
+            ?->setCurrentHud($this);
     }
 
     /**

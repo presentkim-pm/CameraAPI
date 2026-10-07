@@ -66,6 +66,7 @@ final class CameraSetBuilder{
     private ?Vector2 $viewOffset = null;
     private ?Vector3 $entityOffset = null;
     private ?bool $default = null;
+    private bool $removeIgnoreStartingValues = false;
 
     public function __construct(
         private readonly CameraSession $session
@@ -343,6 +344,20 @@ final class CameraSetBuilder{
     }
 
     /**
+     * Makes the client drop the "ignore starting values" component of the preset (protocol field
+     * `removeIgnoreStartingValuesComponent`), so values the preset leaves unset are taken from the instruction
+     * instead of the camera's starting values.
+     *
+     * @param bool $remove
+     *
+     * @return self
+     */
+    public function removeIgnoreStartingValues(bool $remove = true) : self{
+        $this->removeIgnoreStartingValues = $remove;
+        return $this;
+    }
+
+    /**
      * Builds the CameraSetInstruction object.
      *
      * @return CameraSetInstruction
@@ -366,7 +381,7 @@ final class CameraSetBuilder{
             $this->viewOffset,
             $this->entityOffset,
             $this->default,
-            false
+            $this->removeIgnoreStartingValues
         );
     }
 

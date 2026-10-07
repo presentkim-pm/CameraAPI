@@ -570,6 +570,29 @@ final class CameraSession{
     }
 
     /**
+     * Whether a timeline is currently running for this session, i.e. it still has scheduled steps or is paused on
+     * {@see CameraTimeline::waitUntil()}.
+     */
+    public function isTimelinePlaying() : bool{
+        if($this->waitingSignal !== null){
+            return true;
+        }
+        foreach($this->activeTasks as $task){
+            if(!$task->isCancelled()){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns the name of the signal the current timeline is waiting for, or null if it is not waiting.
+     */
+    public function getWaitingSignal() : ?string{
+        return $this->waitingSignal;
+    }
+
+    /**
      * Registers a timeline task to be managed by this session (cancelled when {@see self::stop()} is called).
      *
      * @param TaskHandler $task The scheduled task handle returned by the scheduler.

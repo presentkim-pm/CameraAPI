@@ -28,7 +28,7 @@ declare(strict_types=1);
 namespace kim\present\cameraapi\utils;
 
 /**
- * Vanilla fog IDs for use with {@see \kim\present\cameraapi\builder\CameraFogBuilder}.
+ * Vanilla fog IDs for use with {@see \kim\present\cameraapi\camera\builder\CameraFogBuilder}.
  *
  * These strings are the same as those used by the Minecraft client for biome/effect fog.
  * Availability may depend on client version and resource packs.

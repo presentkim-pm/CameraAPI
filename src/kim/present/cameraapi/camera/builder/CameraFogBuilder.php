@@ -40,6 +40,10 @@ use pocketmine\network\mcpe\protocol\PlayerFogPacket;
  * all layers that were pushed with the given `userProvidedId`. `send()` transmits
  * the current stack as a single PlayerFogPacket (only fog IDs are sent).
  *
+ * The stack is stored on the {@see CameraSession}, so layers pushed by one builder
+ * are still present (and removable) in builders created later for the same player.
+ * Changes only take effect once {@see self::send()} is called.
+ *
  * For vanilla fog IDs use {@see VanillaFogIds}.
  *
  * Example:
@@ -47,31 +51,37 @@ use pocketmine\network\mcpe\protocol\PlayerFogPacket;
  * use kim\present\cameraapi\utils\VanillaFogIds;
  *
  * $session->fog()
- *     ->push(VanillaFogIds::FOG_HELL)
+ *     ->push(VanillaFogIds::FOG_HELL, "boss_phase")
  *     ->send();
+ *
+ * // later
+ * $session->fog()->remove("boss_phase")->send();
  * ```
  */
 final class CameraFogBuilder{
 
     /** @var list<array{fogId: string, userProvidedId: string}> */
-    private array $stack = [];
+    private array $stack;
 
     public function __construct(
         private readonly CameraSession $session
-    ){}
+    ){
+        $this->stack = $session->getFogStack();
+    }
 
     /**
      * Pushes a fog layer onto the stack.
      *
-     * @param string $fogId          Vanilla or resource pack fog ID (see {@see VanillaFogIds})
-     * @param string $userProvidedId Unique identifier used later to remove this layer via {@see self::remove()}
+     * @param string      $fogId          Vanilla or resource pack fog ID (see {@see VanillaFogIds})
+     * @param string|null $userProvidedId Identifier used later to remove this layer via {@see self::remove()}.
+     *                                    Defaults to the fog ID itself.
      *
      * @return self
      */
-    public function push(string $fogId, string $userProvidedId) : self{
+    public function push(string $fogId, ?string $userProvidedId = null) : self{
         $this->stack[] = [
             'fogId' => $fogId,
-            'userProvidedId' => $userProvidedId,
+            'userProvidedId' => $userProvidedId ?? $fogId,
         ];
         return $this;
     }
@@ -92,11 +102,22 @@ final class CameraFogBuilder{
     }
 
     /**
-     * Sends the configured fog stack as a packet.
+     * Removes every fog layer from the stack.
+     *
+     * @return self
+     */
+    public function clear() : self{
+        $this->stack = [];
+        return $this;
+    }
+
+    /**
+     * Stores the configured fog stack on the session and sends it as a packet.
      *
      * @return CameraSession Returns the session for method chaining.
      */
     public function send() : CameraSession{
+        $this->session->setFogStack($this->stack);
         $fogLayers = array_map(
             static fn(array $entry) : string => $entry['fogId'],
             $this->stack

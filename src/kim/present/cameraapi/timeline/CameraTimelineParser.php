@@ -287,7 +287,7 @@ final class CameraTimelineParser{
      * Adds a "fog" step to the timeline.
      *
      * Schema:
-     *  - push: array of { fogId: string, userProvidedId: string }
+     *  - push: array of { fogId: string, userProvidedId?: string } (userProvidedId defaults to fogId)
      *  - remove: array of userProvidedId strings
      *
      * @param CameraTimeline       $timeline
@@ -311,7 +311,7 @@ final class CameraTimelineParser{
 
                     $fogId = isset($item['fogId']) ? (string) $item['fogId'] : null;
                     $userProvidedId = isset($item['userProvidedId']) ? (string) $item['userProvidedId'] : null;
-                    if($fogId === null || $userProvidedId === null){
+                    if($fogId === null){
                         continue;
                     }
 

@@ -65,7 +65,7 @@ final class CameraSetBuilder{
     private ?Vector3 $facingPosition = null;
     private ?Vector2 $viewOffset = null;
     private ?Vector3 $entityOffset = null;
-    private bool $default = false;
+    private ?bool $default = null;
 
     public function __construct(
         private readonly CameraSession $session
@@ -346,12 +346,16 @@ final class CameraSetBuilder{
      * Builds the CameraSetInstruction object.
      *
      * @return CameraSetInstruction
+     *
+     * @throws \LogicException            If no preset has been set (the protocol requires one).
+     * @throws \InvalidArgumentException  If the preset is not registered in {@see CameraPresetRegistry}.
      */
     public function build() : CameraSetInstruction{
-        $presetId = -1;
-        if($this->preset !== null){
-            $presetId = CameraPresetRegistry::getIdByName($this->preset) ?? -1;
+        if($this->preset === null){
+            throw new \LogicException("Camera preset must be set before building a 'set' instruction.");
         }
+        $presetId = CameraPresetRegistry::getIdByName($this->preset)
+            ?? throw new \InvalidArgumentException("Unknown camera preset: " . $this->preset);
 
         return new CameraSetInstruction(
             $presetId,

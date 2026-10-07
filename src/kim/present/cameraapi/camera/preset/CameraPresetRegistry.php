@@ -62,6 +62,15 @@ final class CameraPresetRegistry{
     public const PRESET_THIRD_PERSON = "minecraft:third_person";
     public const PRESET_THIRD_PERSON_FRONT = "minecraft:third_person_front";
 
+    /**
+     * Registers the built-in presets (and sends them to all online players) if that has not happened yet.
+     *
+     * Called when the plugin enables; any other access initializes the registry lazily as well.
+     */
+    public static function init() : void{
+        self::checkInit();
+    }
+
     protected static function setup() : void{
         self::registerVanillaPresets();
         self::$initialized = true;

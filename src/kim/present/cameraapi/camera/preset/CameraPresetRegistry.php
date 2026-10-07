@@ -52,6 +52,9 @@ final class CameraPresetRegistry{
 
     private static int $newPresetId = 0;
 
+    /** Whether vanilla presets have been registered (enables syncing on later registrations). */
+    private static bool $initialized = false;
+
     public const PRESET_FIRST_PERSON = "minecraft:first_person";
     public const PRESET_FIXED_BOOM = "minecraft:fixed_boom";
     public const PRESET_FOLLOW_ORBIT = "minecraft:follow_orbit";
@@ -61,6 +64,7 @@ final class CameraPresetRegistry{
 
     protected static function setup() : void{
         self::registerVanillaPresets();
+        self::$initialized = true;
         self::sendToAll();
     }
 
@@ -115,6 +119,8 @@ final class CameraPresetRegistry{
      *
      * This method assigns a unique sequential ID to the preset based on the current
      * registration count, ensuring compatibility with the client-side preset index.
+     * The updated preset list is sent to all online players, so presets can also be
+     * registered at runtime.
      *
      * @param CameraPreset $preset The preset object, typically built via {@see CameraPresetBuilder}.
      *
@@ -129,7 +135,11 @@ final class CameraPresetRegistry{
             throw new \InvalidArgumentException("\"$lowerName\" is already reserved");
         }
 
-        return self::$members[$lowerName] = new CameraPresetData($lowerName, $preset, self::$newPresetId++);
+        $data = self::$members[$lowerName] = new CameraPresetData($lowerName, $preset, self::$newPresetId++);
+        if(self::$initialized){
+            self::sendToAll();
+        }
+        return $data;
     }
 
     /**
@@ -142,12 +152,7 @@ final class CameraPresetRegistry{
     public static function get(string $name) : ?CameraPresetData{
         self::checkInit();
 
-        $lowerName = strtolower($name);
-        if(!isset(self::$members[$lowerName])){
-            throw new \InvalidArgumentException("No such registry member: " . $lowerName);
-        }
-
-        return self::$members[$lowerName];
+        return self::$members[strtolower($name)] ?? null;
     }
 
     /**
@@ -170,7 +175,7 @@ final class CameraPresetRegistry{
      */
     public static function isRegistered(string $name) : bool{
         self::checkInit();
-        return isset(self::$members[strtoupper($name)]);
+        return isset(self::$members[strtolower($name)]);
     }
 
     /**

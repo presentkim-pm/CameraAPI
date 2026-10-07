@@ -29,13 +29,16 @@ namespace kim\present\cameraapi;
 
 use kim\present\cameraapi\aimassist\AimAssistPresetRegistry;
 use kim\present\cameraapi\camera\preset\CameraPresetRegistry;
+use kim\present\cameraapi\event\CameraAimAssistToggleEvent;
 use kim\present\cameraapi\marker\CameraMarkerEntity;
 use kim\present\cameraapi\session\CameraSessionManager;
 use pocketmine\entity\Skin;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\event\server\DataPacketSendEvent;
+use pocketmine\network\mcpe\protocol\ClientCameraAimAssistPacket;
 use pocketmine\network\mcpe\protocol\ResourcePackStackPacket;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
 use pocketmine\network\mcpe\protocol\types\Experiments;
@@ -86,6 +89,27 @@ final class Main extends PluginBase implements Listener{
     /** @priority MONITOR */
     public function onPlayerQuit(PlayerQuitEvent $event) : void{
         CameraSessionManager::removeSession($event->getPlayer());
+    }
+
+    /** @priority MONITOR */
+    public function onDataPacketReceive(DataPacketReceiveEvent $event) : void{
+        $packet = $event->getPacket();
+        if(!$packet instanceof ClientCameraAimAssistPacket){
+            return;
+        }
+
+        $player = $event->getOrigin()->getPlayer();
+        if($player === null){
+            return;
+        }
+
+        Camera::of($player)->setClientAimAssistAllowed($packet->getAllowAimAssist());
+        (new CameraAimAssistToggleEvent(
+            $player,
+            $packet->getPresetId(),
+            $packet->getActionType(),
+            $packet->getAllowAimAssist()
+        ))->call();
     }
 
     /** @priority LOWEST */

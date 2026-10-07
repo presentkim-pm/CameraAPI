@@ -241,6 +241,24 @@ final class AimAssistPresetRegistry{
         return \array_values(self::$presets);
     }
 
+    /**
+     * Returns the position of the preset in the list sent to clients, or null if it is not registered.
+     */
+    public static function getPresetIndex(string $identifier) : ?int{
+        self::checkInit();
+        $index = \array_search(\strtolower($identifier), \array_keys(self::$presets), true);
+        return $index === false ? null : $index;
+    }
+
+    /**
+     * Returns the position of the category in the list sent to clients, or null if it is not registered.
+     */
+    public static function getCategoryIndex(string $name) : ?int{
+        self::checkInit();
+        $index = \array_search(\strtolower($name), \array_keys(self::$categories), true);
+        return $index === false ? null : $index;
+    }
+
     public static function toProtocolCategories() : array{
         return self::getCategories();
     }

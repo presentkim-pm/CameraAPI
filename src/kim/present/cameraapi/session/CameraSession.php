@@ -33,6 +33,7 @@ use kim\present\cameraapi\camera\builder\CameraFovBuilder;
 use kim\present\cameraapi\camera\builder\CameraSetBuilder;
 use kim\present\cameraapi\camera\builder\CameraSplineBuilder;
 use kim\present\cameraapi\camera\builder\CameraTargetBuilder;
+use kim\present\cameraapi\aimassist\AimAssistActorPriorityBuilder;
 use kim\present\cameraapi\aimassist\AimAssistBuilder;
 use kim\present\cameraapi\hud\HudPreset;
 use kim\present\cameraapi\hud\HudPresetRegistry;
@@ -62,6 +63,7 @@ final class CameraSession{
     private ?CameraTimeline $pausedTimeline = null;
     /** @var list<array{fogId: string, userProvidedId: string}> */
     private array $fogStack = [];
+    private ?bool $clientAimAssistAllowed = null;
 
     /**
      * @param Player $player The player associated with this session.
@@ -239,6 +241,27 @@ final class CameraSession{
      */
     public function aimAssist() : AimAssistBuilder{
         return new AimAssistBuilder($this);
+    }
+
+    /**
+     * Creates a builder that overrides the aim assist priority of individual actors.
+     */
+    public function aimAssistActorPriority() : AimAssistActorPriorityBuilder{
+        return new AimAssistActorPriorityBuilder($this);
+    }
+
+    /**
+     * Whether the client allows aim assist, as last reported by the client; null if it has not reported yet.
+     */
+    public function isClientAimAssistAllowed() : ?bool{
+        return $this->clientAimAssistAllowed;
+    }
+
+    /**
+     * @internal Called when the client reports a change of its aim assist setting.
+     */
+    public function setClientAimAssistAllowed(bool $allowed) : void{
+        $this->clientAimAssistAllowed = $allowed;
     }
 
     /**

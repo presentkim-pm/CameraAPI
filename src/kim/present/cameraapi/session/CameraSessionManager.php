@@ -40,15 +40,27 @@ use pocketmine\player\Player;
  */
 final class CameraSessionManager{
 
-    /** @var \WeakMap<Player, CameraSession> */
-    private static \WeakMap $sessions;
+    /** @var \WeakMap<Player, CameraSession>|null */
+    private static ?\WeakMap $sessions = null;
+
+    /**
+     * Returns the session storage, creating it on first use.
+     *
+     * Lazy creation lets other plugins call `Camera::of()` before this plugin is enabled, and keeps
+     * {@see self::close()} safe when the plugin failed to enable.
+     *
+     * @return \WeakMap<Player, CameraSession>
+     */
+    private static function sessions() : \WeakMap{
+        return self::$sessions ??= new \WeakMap();
+    }
 
     /**
      * Initializes the session storage.
-     * Called when the plugin enables.
+     * Called when the plugin enables. Sessions that already exist are kept.
      */
     public static function init() : void{
-        self::$sessions = new \WeakMap();
+        self::sessions();
     }
 
     /**
@@ -56,7 +68,7 @@ final class CameraSessionManager{
      * Called when the plugin disables.
      */
     public static function close() : void{
-        foreach(self::$sessions as $session){
+        foreach(self::sessions() as $session){
             $session->stop();
         }
     }
@@ -70,7 +82,7 @@ final class CameraSessionManager{
      */
     public static function createSession(Player $player) : CameraSession{
         $session = new CameraSession($player);
-        self::$sessions[$player] = $session;
+        self::sessions()[$player] = $session;
         return $session;
     }
 
@@ -82,7 +94,7 @@ final class CameraSessionManager{
      * @return CameraSession|null Returns null if no session exists.
      */
     public static function getSession(Player $player) : ?CameraSession{
-        return self::$sessions[$player] ?? null;
+        return self::sessions()[$player] ?? null;
     }
 
     /**
@@ -91,9 +103,10 @@ final class CameraSessionManager{
      * @param Player $player
      */
     public static function removeSession(Player $player) : void{
-        if(isset(self::$sessions[$player])){
-            self::$sessions[$player]->stop();
-            unset(self::$sessions[$player]);
+        $sessions = self::sessions();
+        if(isset($sessions[$player])){
+            $sessions[$player]->stop();
+            unset($sessions[$player]);
         }
     }
 }

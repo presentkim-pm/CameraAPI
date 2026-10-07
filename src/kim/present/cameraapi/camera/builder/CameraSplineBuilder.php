@@ -53,10 +53,13 @@ use pocketmine\network\mcpe\protocol\types\camera\CameraSplineInstruction;
  *     ->send();
  * ```
  *
- * @deprecated Causes the client to forcefully disconnect (crash) due to an error.
- *             This will be fixed once the root cause is identified.
+ * Requires PocketMine-MP 5.42+ (BedrockProtocol 56+, Bedrock 1.26.10+).
  *
- * @todo       Investigate and resolve the client crash issue caused by spline data transmission
+ * @deprecated Experimental. On Bedrock 1.26.0 (PocketMine-MP 5.40/5.41) the spline instruction was encoded
+ *             without the rotation key-frame easing and the trailing identifier fields, which made the client drop
+ *             the connection. Newer protocol versions encode those fields, but this builder has not yet been
+ *             verified against a real client. Note that the spline identifier / load-from-JSON fields are always
+ *             sent empty: the client reads them as optional values and only the empty encoding is compatible.
  */
 final class CameraSplineBuilder{
 
@@ -83,9 +86,12 @@ final class CameraSplineBuilder{
     }
 
     /**
-     * Sets the easing type for the movement along the spline.
+     * Sets the spline type field of the instruction.
      *
-     * @param int $type The easing type (see {@link CameraSetInstructionEaseType} constants).
+     * Despite the method name, the protocol documents this field as the spline interpolation type rather than an
+     * ease function: other implementations (e.g. gophertunnel) map 0 to Catmull-Rom and 1 to linear.
+     *
+     * @param int $type Spline type value (0 = Catmull-Rom, 1 = linear).
      *
      * @return self
      */
@@ -112,11 +118,13 @@ final class CameraSplineBuilder{
      *
      * @param Vector3 $rotation Pitch/Yaw/Roll vector.
      * @param float   $time     Time in seconds from start.
+     * @param int     $easeType Easing used to interpolate towards this key frame
+     *                          (see {@link CameraSetInstructionEaseType} constants).
      *
      * @return self
      */
-    public function addRotation(Vector3 $rotation, float $time) : self{
-        $this->rotationOptions[] = new CameraRotationOption($rotation, $time);
+    public function addRotation(Vector3 $rotation, float $time, int $easeType = CameraSetInstructionEaseType::LINEAR) : self{
+        $this->rotationOptions[] = new CameraRotationOption($rotation, $time, $easeType);
         return $this;
     }
 
@@ -154,7 +162,9 @@ final class CameraSplineBuilder{
             $this->easeType,
             $this->curve,
             $this->progressKeyFrames,
-            $this->rotationOptions
+            $this->rotationOptions,
+            "",
+            false
         );
     }
 

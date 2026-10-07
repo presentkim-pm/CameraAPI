@@ -25,8 +25,6 @@
 
 declare(strict_types=1);
 
-namespace kim\present\cameraapi\builder;
-
 namespace kim\present\cameraapi\camera\builder;
 
 use kim\present\cameraapi\session\CameraSession;
@@ -74,9 +72,8 @@ final class CameraTargetBuilder{
     /**
      * Sets the target entity to track.
      *
-     * Passing null clears the current target entity ID, which effectively
-     * stops tracking a specific entity (the behaviour is defined by the
-     * Minecraft client; usually this means \"no target\").
+     * Passing null clears the target; {@see self::send()} then sends a
+     * "remove target" instruction instead.
      *
      * @param Entity|null $entity Target entity or null to clear.
      *
@@ -122,7 +119,7 @@ final class CameraTargetBuilder{
             clear: null,
             fade: null,
             target: $instruction,
-            removeTarget: $instruction === null ? null : true,
+            removeTarget: $instruction === null ? true : null,
             fieldOfView: null,
             spline: null,
             attachToEntity: null,

@@ -64,12 +64,12 @@ final class CameraSessionManager{
     }
 
     /**
-     * Cleans up all sessions.
+     * Resets all sessions (see {@see CameraSession::reset()}).
      * Called when the plugin disables.
      */
     public static function close() : void{
         foreach(self::sessions() as $session){
-            $session->stop();
+            $session->reset();
         }
     }
 

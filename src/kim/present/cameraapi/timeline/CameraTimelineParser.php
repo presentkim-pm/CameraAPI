@@ -34,7 +34,10 @@ use kim\present\cameraapi\camera\builder\CameraSetBuilder;
 use kim\present\cameraapi\camera\builder\CameraTargetBuilder;
 use kim\present\cameraapi\session\CameraSession;
 use kim\present\cameraapi\utils\ControlSchemePackets;
+use pocketmine\color\Color;
 use pocketmine\math\Vector3;
+use pocketmine\network\mcpe\protocol\CameraShakePacket;
+use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstructionEaseType;
 
 /**
  * Utility for constructing {@see CameraTimeline} instances from array / JSON data.
@@ -116,11 +119,11 @@ final class CameraTimelineParser{
                 case 'shake':
                     $intensity = (float) ($step['intensity'] ?? 0.5);
                     $duration = (float) ($step['duration'] ?? 1.0);
-                    $timeline->shake($intensity, $duration);
+                    $timeline->shake($intensity, $duration, self::parseShakeType($step));
                     break;
 
                 case 'stopShake':
-                    $timeline->stopShake();
+                    $timeline->stopShake(self::parseShakeType($step));
                     break;
 
                 case 'clear':
@@ -175,6 +178,11 @@ final class CameraTimelineParser{
      * @param array<string, mixed> $step
      */
     private static function addSetStep(CameraTimeline $timeline, array $step) : void{
+        if(!isset($step['preset'])){
+            throw new \InvalidArgumentException("'set' step requires a 'preset'.");
+        }
+        $ease = isset($step['ease']) && is_array($step['ease']) ? self::parseEase($step['ease']) : null;
+
         $timeline->add(
         /**
          * @param CameraSession $session
@@ -182,9 +190,7 @@ final class CameraTimelineParser{
             function(CameraSession $session) use ($step) : void{
                 $builder = new CameraSetBuilder($session);
 
-                if(isset($step['preset'])){
-                    $builder->preset((string) $step['preset']);
-                }
+                $builder->preset((string) $step['preset']);
 
                 if(isset($step['position']) && is_array($step['position']) && count($step['position']) >= 3){
                     $builder->position(
@@ -213,11 +219,8 @@ final class CameraTimelineParser{
                     );
                 }
 
-                if(isset($step['ease']) && is_array($step['ease'])){
-                    $builder->ease(
-                        (int) ($step['ease']['type'] ?? 0),
-                        (float) ($step['ease']['duration'] ?? 0.0)
-                    );
+                if($ease !== null){
+                    $builder->ease($ease[0], $ease[1]);
                 }
 
                 $builder->send();
@@ -227,6 +230,8 @@ final class CameraTimelineParser{
 
     /**
      * Adds a "fade" step to the timeline.
+     *
+     * Schema: in, stay, out (seconds), color: [r, g, b] (0-255)
      *
      * @param CameraTimeline       $timeline
      * @param array<string, mixed> $step
@@ -248,6 +253,13 @@ final class CameraTimelineParser{
                 if(isset($step['out'])){
                     $builder->out((float) $step['out']);
                 }
+                if(isset($step['color']) && is_array($step['color']) && count($step['color']) >= 3){
+                    $builder->color(new Color(
+                        (int) $step['color'][0],
+                        (int) $step['color'][1],
+                        (int) $step['color'][2]
+                    ));
+                }
 
                 $builder->send();
             }
@@ -257,10 +269,14 @@ final class CameraTimelineParser{
     /**
      * Adds a "fov" step to the timeline.
      *
+     * Schema: set (degrees), clear (bool), ease: { type, duration }
+     *
      * @param CameraTimeline       $timeline
      * @param array<string, mixed> $step
      */
     private static function addFovStep(CameraTimeline $timeline, array $step) : void{
+        $ease = isset($step['ease']) && is_array($step['ease']) ? self::parseEase($step['ease']) : null;
+
         $timeline->add(
         /**
          * @param CameraSession $session
@@ -271,11 +287,11 @@ final class CameraTimelineParser{
                 if(isset($step['set'])){
                     $builder->set((float) $step['set']);
                 }
-                if(isset($step['ease']) && is_array($step['ease'])){
-                    $builder->ease(
-                        (int) ($step['ease']['type'] ?? 0),
-                        (float) ($step['ease']['duration'] ?? 0.0)
-                    );
+                if(($step['clear'] ?? false) === true){
+                    $builder->clear();
+                }
+                if($ease !== null){
+                    $builder->ease($ease[0], $ease[1]);
                 }
 
                 $builder->send();
@@ -334,15 +350,8 @@ final class CameraTimelineParser{
         if($schemeName === ''){
             return;
         }
-        $allowed = [
-            'LOCKED_PLAYER_RELATIVE_STRAFE', 'CAMERA_RELATIVE', 'CAMERA_RELATIVE_STRAFE',
-            'PLAYER_RELATIVE', 'PLAYER_RELATIVE_STRAFE',
-        ];
-        if(!in_array($schemeName, $allowed, true)){
-            return;
-        }
-        $packet = call_user_func([ControlSchemePackets::class, $schemeName]);
-        $timeline->controlScheme($packet);
+        // Case-insensitive, same as ControlSchemeBuilder::byName(); throws on unknown names.
+        $timeline->controlScheme(ControlSchemePackets::get($schemeName));
     }
 
     /**
@@ -385,5 +394,39 @@ final class CameraTimelineParser{
         }
         $timeline->attachToEntity($runtimeId);
     }
-}
 
+    /**
+     * Parses an ease object `{ "type": int|string, "duration": float }`.
+     *
+     * The type may be a {@see CameraSetInstructionEaseType} constant value or its vanilla name
+     * (e.g. "linear", "in_out_sine"), matching the names used by the `/camera` command.
+     *
+     * @param array<string, mixed> $ease
+     *
+     * @return array{int, float} [easeType, duration]
+     */
+    private static function parseEase(array $ease) : array{
+        $type = $ease['type'] ?? CameraSetInstructionEaseType::LINEAR;
+        if(is_string($type) && !is_numeric($type)){
+            $type = CameraSetInstructionEaseType::fromName(strtolower($type));
+        }
+        return [(int) $type, (float) ($ease['duration'] ?? 0.0)];
+    }
+
+    /**
+     * Parses the optional `shakeType` field ("positional" / "rotational" or 0 / 1).
+     *
+     * @param array<string, mixed> $step
+     */
+    private static function parseShakeType(array $step) : int{
+        $type = $step['shakeType'] ?? null;
+        if(is_string($type)){
+            $type = strtolower($type);
+        }
+        return match($type){
+            null, 'positional', CameraShakePacket::TYPE_POSITIONAL => CameraShakePacket::TYPE_POSITIONAL,
+            'rotational', CameraShakePacket::TYPE_ROTATIONAL => CameraShakePacket::TYPE_ROTATIONAL,
+            default => throw new \InvalidArgumentException("Invalid shake type: " . var_export($type, true))
+        };
+    }
+}

@@ -166,7 +166,7 @@ $session->set()
 ```
 
 - **Key methods**
-  - `preset(string $preset) : self`
+  - `preset(string $preset) : self` – **required**; `send()` throws if it is missing or not registered.
     - e.g. `"minecraft:first_person"`, `"minecraft:third_person"`, `"minecraft:free"`, or your custom presets.
   - `ease(int $type, float $duration) : self`
     - Use `CameraSetInstructionEaseType` constants (e.g. `EaseType::LINEAR`).
@@ -226,7 +226,8 @@ $session->target()
   - `offset(Vector3 $offset) : self`
   - `entity(?Entity $entity) : self` – set or clear the tracked entity (null to clear).
   - `entityId(?int $id) : self` – set or clear the tracked entity ID (null to clear).
-  - `send() : CameraSession`
+  - `send() : CameraSession` – sends a target instruction, or a "remove target" instruction when no entity is set
+    (e.g. `$session->target()->send()` removes the current target).
 
 #### 2.4 FOV Control: `fov() : CameraFovBuilder`
 
@@ -242,11 +243,12 @@ $session->fov()
 - **Methods**
   - `set(float $fov) : self` — default is 70.
   - `ease(int $type, float $duration) : self`
+  - `clear(bool $clear = true) : self` — clear the FOV set by previous instructions (like `/camera fov_clear`).
   - `send() : CameraSession`
 
 #### 2.5 Fog (atmosphere): `fog() : CameraFogBuilder`
 
-Controls client-side fog layers (e.g. vanilla biome fogs like Nether or Crimson Forest). Fog is managed as a stack similar to the vanilla `/fog` command: each layer has a `fogId` and a `userProvidedId`. You can push the same fog ID multiple times with different `userProvidedId`s; `remove($userProvidedId)` removes all layers that were pushed with that id; `send()` transmits the current stack as a single packet.
+Controls client-side fog layers (e.g. vanilla biome fogs like Nether or Crimson Forest). Fog is managed as a stack similar to the vanilla `/fog` command: each layer has a `fogId` and a `userProvidedId`. You can push the same fog ID multiple times with different `userProvidedId`s; `remove($userProvidedId)` removes all layers that were pushed with that id; `send()` transmits the current stack as a single packet. The stack is kept per player on the `CameraSession`, so every `fog()` call starts from the stack that was last sent.
 
 Vanilla fog IDs are available as constants in **`kim\present\cameraapi\utils\VanillaFogIds`** (e.g. `VanillaFogIds::FOG_HELL`, `VanillaFogIds::FOG_CRIMSON_FOREST`, `VanillaFogIds::FOG_THE_END`). See that class for the full list.
 
@@ -271,8 +273,9 @@ $session->fog()
 ```
 
 - **Methods**
-  - `push(string $fogId, string $userProvidedId) : self` – push a fog layer; the same fog ID can be pushed multiple times with different user IDs.
+  - `push(string $fogId, ?string $userProvidedId = null) : self` – push a fog layer; the same fog ID can be pushed multiple times with different user IDs. `userProvidedId` defaults to `fogId`.
   - `remove(string $userProvidedId) : self` – remove all layers that were pushed with the given `userProvidedId`.
+  - `clear() : self` – remove every layer.
   - `send() : CameraSession` – send the current fog stack to the client.
 
 #### 2.6 Shake / Reset
@@ -419,7 +422,7 @@ function playBossIntro(Player $player, Vector3 $doorPos, Vector3 $bossPos) : voi
         ->set(fn($b) => $b->preset("minecraft:free")->position($doorPos))
         ->wait(2.0)
         ->waitUntil("boss_spawned") // pause here until the boss actually spawns
-        ->set(fn($b) => $b->position($bossPos))
+        ->set(fn($b) => $b->preset("minecraft:free")->position($bossPos))
         ->shake(0.8, 2.0)
         ->wait(2.0)
         ->clear();
@@ -454,10 +457,11 @@ This is useful if non-programmers (builders / designers) need to tweak cutscenes
 
 - `wait` – `{ "type": "wait", "seconds": 2.0 }`
 - `waitUntil` – `{ "type": "waitUntil", "signal": "boss_spawned" }`
-- `shake` – `{ "type": "shake", "intensity": 0.8, "duration": 1.5 }`
-- `stopShake` – `{ "type": "stopShake" }`
+- `shake` – `{ "type": "shake", "intensity": 0.8, "duration": 1.5, "shakeType": "positional" }`
+  (`shakeType`: `"positional"` (default) or `"rotational"`)
+- `stopShake` – `{ "type": "stopShake", "shakeType": "positional" }`
 - `clear` – `{ "type": "clear" }`
-- `set` – camera position / preset:
+- `set` – camera position / preset (`preset` is required; loading fails without it):
 
   ```json
   {
@@ -466,9 +470,12 @@ This is useful if non-programmers (builders / designers) need to tweak cutscenes
     "position": [100, 60, 100],
     "rotation": [30, 90],
     "facing": [100, 60, 120],
-    "ease": { "type": 0, "duration": 1.0 }
+    "ease": { "type": "in_out_sine", "duration": 1.0 }
   }
   ```
+
+  `ease.type` accepts either a `CameraSetInstructionEaseType` value (e.g. `0`) or the vanilla `/camera` ease name
+  (e.g. `"linear"`, `"in_out_sine"`, `"out_bounce"`). The same applies to `fov`.
 
 - `fade` – screen fade:
 
@@ -477,7 +484,8 @@ This is useful if non-programmers (builders / designers) need to tweak cutscenes
     "type": "fade",
     "in": 0.5,
     "stay": 1.0,
-    "out": 0.5
+    "out": 0.5,
+    "color": [255, 0, 0]
   }
   ```
 
@@ -491,7 +499,9 @@ This is useful if non-programmers (builders / designers) need to tweak cutscenes
   }
   ```
 
-- `fog` – push and/or remove fog layers. `push`: array of `{ "fogId": "...", "userProvidedId": "..." }`. `remove`: array of `userProvidedId` strings. Order: remove then push.
+  Use `"clear": true` to clear the FOV instead (like `/camera fov_clear`).
+
+- `fog` – push and/or remove fog layers. `push`: array of `{ "fogId": "...", "userProvidedId": "..." }` (`userProvidedId` defaults to `fogId`). `remove`: array of `userProvidedId` strings. Order: remove then push. Layers persist between steps (the stack is stored per player).
 
   ```json
   {
@@ -503,7 +513,7 @@ This is useful if non-programmers (builders / designers) need to tweak cutscenes
   }
   ```
 
-- `controlScheme` – send a control scheme packet. `scheme` must be one of: `LOCKED_PLAYER_RELATIVE_STRAFE`, `CAMERA_RELATIVE`, `CAMERA_RELATIVE_STRAFE`, `PLAYER_RELATIVE`, `PLAYER_RELATIVE_STRAFE`:
+- `controlScheme` – send a control scheme packet. `scheme` must be one of (case-insensitive): `LOCKED_PLAYER_RELATIVE_STRAFE`, `CAMERA_RELATIVE`, `CAMERA_RELATIVE_STRAFE`, `PLAYER_RELATIVE`, `PLAYER_RELATIVE_STRAFE`. Unknown names fail when loading:
 
   ```json
   { "type": "controlScheme", "scheme": "LOCKED_PLAYER_RELATIVE_STRAFE" }
@@ -1126,15 +1136,19 @@ function applyTopdownCamera(Player $player) : void{
     player.
   - If you want multiple overlapping timelines, you must manage scheduling and cancellation yourself.
 - **Avoid `spline()` for now**
-  - `CameraSession::spline()` and `CameraTimeline::spline()` use `CameraSplineBuilder`, which is currently known to
-    cause client crashes / disconnects and is marked deprecated.
+  - `CameraSession::spline()` and `CameraTimeline::spline()` use `CameraSplineBuilder`, which is marked deprecated.
+    On PocketMine-MP 5.40/5.41 (Bedrock 1.26.0) the spline instruction caused client disconnects. It now builds
+    against PocketMine-MP 5.42+, but it has not been verified against a real client yet.
 - **Experimental flag conflicts**
   - This plugin automatically enables `experimental_creator_cameras`, but if other plugins also modify `StartGamePacket`
     or `ResourcePackStackPacket`, be careful about interaction and ordering.
 - **Exceptions & edge cases**
   - Most APIs are designed to safely no-op if the player is offline or the packet cannot be sent.
-  - If you reference a non-registered preset name, `CameraPresetRegistry::get()` may throw `\InvalidArgumentException`.
-    - Prefer registering all presets during your plugin's initialization and avoid typos in preset names.
+  - `CameraPresetRegistry::get()` / `getIdByName()` return `null` for unknown preset names.
+  - `CameraSetBuilder::send()` throws `\LogicException` when no preset was set and `\InvalidArgumentException`
+    when the preset is not registered.
+    - Presets registered after players joined are re-sent automatically, but registering them during your plugin's
+      initialization is still preferred.
 
 -----
 

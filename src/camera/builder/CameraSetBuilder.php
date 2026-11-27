@@ -34,6 +34,7 @@ use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\CameraInstructionPacket;
 use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstruction;
 use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstructionEase;
+use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstructionEaseType;
 use pocketmine\network\mcpe\protocol\types\camera\CameraSetInstructionRotation;
 
 /**
@@ -87,12 +88,12 @@ final class CameraSetBuilder{
     /**
      * Sets the easing animation for the camera movement.
      *
-     * @param int   $type     The easing type (see {@link CameraSetInstructionEaseType} constants).
+     * @param CameraSetInstructionEaseType $type     The easing type.
      * @param float $duration The duration of the transition in seconds.
      *
      * @return self
      */
-    public function ease(int $type, float $duration) : self{
+    public function ease(CameraSetInstructionEaseType $type, float $duration) : self{
         $this->ease = new CameraSetInstructionEase($type, $duration);
         return $this;
     }

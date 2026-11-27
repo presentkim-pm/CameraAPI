@@ -1,8 +1,9 @@
 ---
 name: CameraAPI
 main: kim\present\cameraapi\Main
-version: 1.0.0
-api: [ 5.42.0 ]
+src-namespace-prefix: kim\present\cameraapi
+version: 2.0.0
+api: [ 5.51.0 ]
 author: PresentKim
 description: A simple camera API plugin
 ...

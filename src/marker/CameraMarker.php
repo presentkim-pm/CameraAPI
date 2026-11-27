@@ -152,7 +152,7 @@ final readonly class CameraMarker{
      * an ease (transition) so the camera moves smoothly to this pose.
      *
      * @param CameraSession $session      The session to apply this marker's position and rotation to.
-     * @param int|null      $easeType     Easing type (e.g. {@see CameraSetInstructionEaseType::LINEAR}); null to skip
+     * @param CameraSetInstructionEaseType|null $easeType Easing type (e.g. {@see CameraSetInstructionEaseType::LINEAR}); null to skip
      *                                    ease.
      * @param float|null    $easeDuration Duration of the transition in seconds; used only when $easeType is not null.
      *
@@ -160,7 +160,7 @@ final readonly class CameraMarker{
      */
     public function applyToSession(
         CameraSession $session,
-        ?int $easeType = null,
+        ?CameraSetInstructionEaseType $easeType = null,
         ?float $easeDuration = null
     ) : CameraSession{
         $location = $this->entity->getLocation();

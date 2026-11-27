@@ -52,7 +52,7 @@ final class CameraFovBuilder{
 
     private float $fov = 70.0;
     private float $easeTime = 0.0;
-    private int $easeType = EaseType::LINEAR;
+    private EaseType $easeType = EaseType::LINEAR;
     private bool $clear = false;
 
     public function __construct(
@@ -74,12 +74,12 @@ final class CameraFovBuilder{
     /**
      * Sets the easing animation for the FOV change.
      *
-     * @param int   $type     The easing type (see {@link EaseType} constants).
+     * @param EaseType $type     The easing type.
      * @param float $duration Duration in seconds.
      *
      * @return self
      */
-    public function ease(int $type, float $duration) : self{
+    public function ease(EaseType $type, float $duration) : self{
         $this->easeType = $type;
         $this->easeTime = $duration;
         return $this;

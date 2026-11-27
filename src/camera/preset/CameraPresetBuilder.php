@@ -58,6 +58,8 @@ class CameraPresetBuilder{
     private ?bool $playerEffects = null;
     private ?CameraPresetAimAssist $aimAssist = null;
     private ?ControlScheme $controlScheme = null;
+    private bool $applyInheritedStartingRotation = false;
+    private ?Vector2 $startingRotation = null;
 
     public function __construct(private readonly string $name){}
 
@@ -343,6 +345,30 @@ class CameraPresetBuilder{
     }
 
     /**
+     * Sets whether the starting rotation is inherited from the previous camera (Bedrock 1.26.60+).
+     *
+     * @param bool $applyInheritedStartingRotation
+     *
+     * @return self
+     */
+    public function setApplyInheritedStartingRotation(bool $applyInheritedStartingRotation) : self{
+        $this->applyInheritedStartingRotation = $applyInheritedStartingRotation;
+        return $this;
+    }
+
+    /**
+     * Sets the starting rotation of the camera as (pitch, yaw) (Bedrock 1.26.60+).
+     *
+     * @param Vector2|null $startingRotation null to not set it.
+     *
+     * @return self
+     */
+    public function setStartingRotation(?Vector2 $startingRotation) : self{
+        $this->startingRotation = $startingRotation;
+        return $this;
+    }
+
+    /**
      * Builds the final CameraPreset object.
      *
      * @return CameraPreset
@@ -355,7 +381,8 @@ class CameraPresetBuilder{
             $this->continueTargeting, $this->blockListeningRadius,
             $this->viewOffset, $this->entityOffset, $this->radius,
             $this->yawLimitMin, $this->yawLimitMax, $this->audioListenerType,
-            $this->playerEffects, $this->aimAssist, $this->controlScheme
+            $this->playerEffects, $this->aimAssist, $this->controlScheme,
+            $this->applyInheritedStartingRotation, $this->startingRotation
         );
     }
 
@@ -388,6 +415,8 @@ class CameraPresetBuilder{
         ?bool $playerEffects = null,
         ?CameraPresetAimAssist $aimAssist = null,
         ?ControlScheme $controlScheme = null,
+        bool $applyInheritedStartingRotation = false,
+        ?Vector2 $startingRotation = null,
     ) : CameraPreset{
         return new CameraPreset(
             $name,
@@ -411,7 +440,9 @@ class CameraPresetBuilder{
             $audioListenerType,
             $playerEffects,
             $aimAssist,
-            $controlScheme
+            $controlScheme,
+            $applyInheritedStartingRotation,
+            $startingRotation
         );
     }
 }

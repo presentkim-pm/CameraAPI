@@ -64,7 +64,7 @@ use pocketmine\network\mcpe\protocol\types\camera\CameraSplineInstruction;
 final class CameraSplineBuilder{
 
     private float $totalTime = 20.0;
-    private int $easeType = CameraSetInstructionEaseType::LINEAR;
+    private CameraSetInstructionEaseType $easeType = CameraSetInstructionEaseType::LINEAR;
     private array $curve = [];
     private array $progressKeyFrames = [];
     private array $rotationOptions = [];
@@ -86,16 +86,13 @@ final class CameraSplineBuilder{
     }
 
     /**
-     * Sets the spline type field of the instruction.
+     * Sets the ease type of the spline instruction.
      *
-     * Despite the method name, the protocol documents this field as the spline interpolation type rather than an
-     * ease function: other implementations (e.g. gophertunnel) map 0 to Catmull-Rom and 1 to linear.
-     *
-     * @param int $type Spline type value (0 = Catmull-Rom, 1 = linear).
+     * @param CameraSetInstructionEaseType $type
      *
      * @return self
      */
-    public function ease(int $type) : self{
+    public function ease(CameraSetInstructionEaseType $type) : self{
         $this->easeType = $type;
         return $this;
     }
@@ -118,12 +115,11 @@ final class CameraSplineBuilder{
      *
      * @param Vector3 $rotation Pitch/Yaw/Roll vector.
      * @param float   $time     Time in seconds from start.
-     * @param int     $easeType Easing used to interpolate towards this key frame
-     *                          (see {@link CameraSetInstructionEaseType} constants).
+     * @param CameraSetInstructionEaseType $easeType Easing used to interpolate towards this key frame.
      *
      * @return self
      */
-    public function addRotation(Vector3 $rotation, float $time, int $easeType = CameraSetInstructionEaseType::LINEAR) : self{
+    public function addRotation(Vector3 $rotation, float $time, CameraSetInstructionEaseType $easeType = CameraSetInstructionEaseType::LINEAR) : self{
         $this->rotationOptions[] = new CameraRotationOption($rotation, $time, $easeType);
         return $this;
     }
@@ -134,11 +130,11 @@ final class CameraSplineBuilder{
      *
      * @param float $value    Progress value (0.0 - 1.0).
      * @param float $time     Time in seconds.
-     * @param int   $easeType Easing for this segment.
+     * @param CameraSetInstructionEaseType $easeType Easing for this segment.
      *
      * @return self
      */
-    public function addProgress(float $value, float $time, int $easeType) : self{
+    public function addProgress(float $value, float $time, CameraSetInstructionEaseType $easeType) : self{
         $this->progressKeyFrames[] = new CameraProgressOption($value, $time, $easeType);
         return $this;
     }

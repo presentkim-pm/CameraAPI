@@ -49,7 +49,6 @@ use pocketmine\network\mcpe\protocol\types\GameMode;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper;
 use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
 use pocketmine\network\mcpe\protocol\types\PlayerPermissions;
-use pocketmine\network\mcpe\protocol\UpdateAbilitiesPacket;
 use pocketmine\player\Player;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
@@ -128,7 +127,7 @@ final class CameraMarkerEntity extends Entity implements NeverSavedWithChunkEnti
         $networkSession = $player->getNetworkSession();
         $typeConverter = $networkSession->getTypeConverter();
 
-        $networkSession->sendDataPacket(PlayerListPacket::add([
+        $networkSession->sendDataPacket(PlayerListPacket::create([
             PlayerListEntry::createAdditionEntry(
                 $this->uuid,
                 $this->id,
@@ -150,20 +149,21 @@ final class CameraMarkerEntity extends Entity implements NeverSavedWithChunkEnti
             GameMode::SURVIVAL,
             $this->getAllNetworkData(),
             new PropertySyncData([], []),
-            UpdateAbilitiesPacket::create(new AbilitiesData(
-                    CommandPermissions::NORMAL,
-                    PlayerPermissions::VISITOR,
-                    $this->getId(),
-                    [])
+            new AbilitiesData(
+                CommandPermissions::NORMAL,
+                PlayerPermissions::VISITOR,
+                $this->getId(),
+                []
             ),
             [],
+            null,
             "",
             DeviceOS::UNKNOWN
         ));
 
         $this->sendData([$player],
             [EntityMetadataProperties::NAMETAG => new StringMetadataProperty($this->getNameTag())]);
-        $networkSession->sendDataPacket(PlayerListPacket::remove([PlayerListEntry::createRemovalEntry($this->uuid)]));
+        $networkSession->sendDataPacket(PlayerListPacket::create([PlayerListEntry::createRemovalEntry($this->uuid)]));
     }
 
     /**

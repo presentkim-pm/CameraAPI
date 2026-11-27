@@ -203,7 +203,7 @@ final class CameraTimelineParser{
         /**
          * @param CameraSession $session
          */
-            function(CameraSession $session) use ($step) : void{
+            function(CameraSession $session) use ($step, $ease) : void{
                 $builder = new CameraSetBuilder($session);
 
                 $builder->preset((string) $step['preset']);
@@ -389,7 +389,7 @@ final class CameraTimelineParser{
         /**
          * @param CameraSession $session
          */
-            function(CameraSession $session) use ($step) : void{
+            function(CameraSession $session) use ($step, $ease) : void{
                 $builder = new CameraFovBuilder($session);
 
                 if(isset($step['set'])){
@@ -506,19 +506,28 @@ final class CameraTimelineParser{
     /**
      * Parses an ease object `{ "type": int|string, "duration": float }`.
      *
-     * The type may be a {@see CameraSetInstructionEaseType} constant value or its vanilla name
-     * (e.g. "linear", "in_out_sine"), matching the names used by the `/camera` command.
+     * The type may be a vanilla name (e.g. "linear", "in_out_sine"; matching the names used by the `/camera` command)
+     * or the ordinal of the {@see CameraSetInstructionEaseType} case (0 = linear, 1 = spring, ...).
      *
      * @param array<string, mixed> $ease
      *
-     * @return array{int, float} [easeType, duration]
+     * @return array{CameraSetInstructionEaseType, float} [easeType, duration]
      */
     private static function parseEase(array $ease) : array{
         $type = $ease['type'] ?? CameraSetInstructionEaseType::LINEAR;
-        if(is_string($type) && !is_numeric($type)){
-            $type = CameraSetInstructionEaseType::fromName(strtolower($type));
+        if($type instanceof CameraSetInstructionEaseType){
+            $easeType = $type;
+        }elseif(is_string($type) && !is_numeric($type)){
+            $easeType = CameraSetInstructionEaseType::tryFrom(strtolower($type))
+                ?? throw new \InvalidArgumentException("Invalid ease type: " . $type);
+        }else{
+            try{
+                $easeType = CameraSetInstructionEaseType::fromOrdinal((int) $type);
+            }catch(\Throwable){
+                throw new \InvalidArgumentException("Invalid ease type: " . var_export($type, true));
+            }
         }
-        return [(int) $type, (float) ($ease['duration'] ?? 0.0)];
+        return [$easeType, (float) ($ease['duration'] ?? 0.0)];
     }
 
     /**
